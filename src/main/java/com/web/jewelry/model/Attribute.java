@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Entity
-public class Feature {
+public class Attribute {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +22,6 @@ public class Feature {
     private LocalDateTime updatedAt;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "feature", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<FeatureValue> featureValues;
+    @OneToMany(mappedBy = "attribute", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AttributeValue> attributeValues;
 }

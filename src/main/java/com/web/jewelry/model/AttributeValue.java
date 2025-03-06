@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Entity
-public class FeatureValue {
+public class AttributeValue {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +22,6 @@ public class FeatureValue {
     private Product product;
 
     @ManyToOne
-    @JoinColumn(name = "feature_id")
-    private Feature feature;
+    @JoinColumn(name = "attribute_id")
+    private Attribute attribute;
 }

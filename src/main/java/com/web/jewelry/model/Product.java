@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.web.jewelry.enums.EProductStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,11 +23,7 @@ public class Product {
     private String title;
     @Column(length = 16777216)
     private String description;
-    private Long price;
-    private Long discountPrice;
-    private Long discountRate;
-    private Long stock;
-    private Long sold;
+    private String material;
     private EProductStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -46,10 +41,10 @@ public class Product {
     private List<Review> reviews;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<SizeVariant> sizeVariants;
+    private List<ProductSize> productSizes;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<FeatureValue> features;
+    private List<AttributeValue> attributes;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Image> images;

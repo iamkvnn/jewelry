@@ -12,14 +12,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
-public class SizeVariant {
+public class ProductSize {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(unique = true)
     private String size;
     private Long stock;
     private Long price;
+    private Long sold;
     private Long discountPrice;
     private Long discountRate;
     private LocalDateTime createdAt;

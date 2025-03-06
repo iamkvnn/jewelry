@@ -1,6 +1,5 @@
 package com.web.jewelry.dto.response;
 
-import com.web.jewelry.model.Category;
 import lombok.Data;
 
 import java.util.List;
@@ -10,13 +9,10 @@ public class ProductResponse {
     private Long id;
     private String title;
     private String description;
-    private Long price;
-    private Long discountPrice;
-    private Long discountRate;
-    private Long stock;
+    private String material;
     private CategoryResponse category;
     private CollectionResponse collection;
-    private List<FeatureValueResponse> features;
-    private List<SizeVariantResponse> sizeVariants;
+    private List<AttributeValueResponse> attributes;
+    private List<ProductSizeResponse> productSizes;
     private List<ImageResponse> images;
 }

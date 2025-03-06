@@ -3,9 +3,9 @@ package com.web.jewelry.dto.request;
 import lombok.Data;
 
 @Data
-public class FeatureValueRequest {
+public class AttributeValueRequest {
     private Long id;
-    private Long featureId;
+    private Long attributeId;
     private String name;
     private String value;
 }

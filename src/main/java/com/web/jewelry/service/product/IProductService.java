@@ -1,7 +1,6 @@
 package com.web.jewelry.service.product;
 
 import com.web.jewelry.dto.request.ProductRequest;
-import com.web.jewelry.dto.request.SizeVariantRequest;
 import com.web.jewelry.dto.response.ProductResponse;
 import com.web.jewelry.model.Product;
 import org.springframework.data.domain.Page;

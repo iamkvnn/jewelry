@@ -4,14 +4,14 @@ import com.web.jewelry.dto.request.ProductRequest;
 import com.web.jewelry.dto.response.ProductResponse;
 import com.web.jewelry.enums.EProductStatus;
 import com.web.jewelry.exception.AlreadyExistException;
+import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
 import com.web.jewelry.repository.ProductRepository;
 import com.web.jewelry.service.category.ICategoryService;
 import com.web.jewelry.service.collection.ICollectionService;
-import com.web.jewelry.service.feature.IFeatureService;
-import com.web.jewelry.service.feature.IFeatureValueService;
-import com.web.jewelry.service.sizeVariant.ISizeVariantService;
+import com.web.jewelry.service.attribute.IAttributeValueService;
+import com.web.jewelry.service.productSize.IProductSizeService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -29,8 +29,8 @@ public class ProductService implements IProductService {
     private final ProductRepository productRepository;
     private final ICategoryService categoryService;
     private final ICollectionService collectionService;
-    private final ISizeVariantService sizeVariantService;
-    private final IFeatureValueService featureValueService;
+    private final IProductSizeService productSizeService;
+    private final IAttributeValueService attributeValueService;
     private final ModelMapper modelMapper;
 
     @Override
@@ -57,8 +57,12 @@ public class ProductService implements IProductService {
                 })
                 .map(productRepository::save)
                 .map(product -> {
-                    product.setFeatures(request.getFeatures() != null ? featureValueService.updateProductFeature(product, request.getFeatures()) : null);
-                    product.setSizeVariants(request.getSizeVariants() != null ? sizeVariantService.updateSizeVariant(product, request.getSizeVariants()) : null);
+                    Optional.ofNullable(request.getAttributes())
+                            .ifPresent(attributes -> product.setAttributes(attributeValueService.updateProductAttributes(product, attributes)));
+                    Optional.ofNullable(request.getProductSizes())
+                            .ifPresentOrElse(productSizes -> product.setProductSizes(productSizeService.updateProductSize(product, productSizes))
+                                    , () -> {throw new BadRequestException("Product size is required");}
+                            );
                     return product;
                 })
                 .map(this::convertToProductResponse)
@@ -68,10 +72,7 @@ public class ProductService implements IProductService {
     private Product updateExistingProduct(Product product, ProductRequest request, Collection collection, Category category) {
         product.setTitle(request.getTitle());
         product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
-        product.setDiscountPrice(request.getDiscountPrice());
-        product.setDiscountRate(request.getDiscountRate());
-        product.setStock(request.getStock());
+        product.setMaterial(request.getMaterial());
         product.setCategory(category);
         product.setCollection(collection);
         return product;
@@ -88,18 +89,18 @@ public class ProductService implements IProductService {
         Product product = productRepository.save(Product.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .price(request.getPrice())
-                .discountPrice(request.getDiscountPrice())
-                .discountRate(request.getDiscountRate())
-                .stock(request.getStock())
-                .sold(0L)
+                .material(request.getMaterial())
                 .category(category)
                 .collection(collection)
                 .status(EProductStatus.IN_STOCK)
                 .createdAt(LocalDateTime.now())
                 .build());
-        product.setFeatures(request.getFeatures() != null ? featureValueService.addProductFeatures(product, request.getFeatures()) : null);
-        product.setSizeVariants(request.getSizeVariants() != null ? sizeVariantService.addSizeVariant(product, request.getSizeVariants()) : null);
+        Optional.ofNullable(request.getAttributes())
+                .ifPresent(attributes -> product.setAttributes(attributeValueService.addProductAttributes(product, attributes)));
+        Optional.ofNullable(request.getProductSizes())
+                .ifPresentOrElse(productSizes -> product.setProductSizes(productSizeService.addProductSize(product, productSizes))
+                        , () -> {throw new BadRequestException("Product size is required");}
+                );
         return convertToProductResponse(product);
     }
 
@@ -118,7 +119,7 @@ public class ProductService implements IProductService {
     @Override
     public ProductResponse convertToProductResponse(Product product) {
         ProductResponse response = modelMapper.map(product, ProductResponse.class);
-        response.setFeatures(product.getFeatures() != null ? featureValueService.convertToFeatureValueResponses(product.getFeatures()) : null);
+        response.setAttributes(product.getAttributes() != null ? attributeValueService.convertToAttributeValueResponses(product.getAttributes()) : null);
         return response;
     }
 
