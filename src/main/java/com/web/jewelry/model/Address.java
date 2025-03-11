@@ -13,16 +13,15 @@ public class Address {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String recipientName;
+    private String recipientPhone;
     private String province;
     private String district;
     private String village;
     private String address;
+    private Boolean isDefault;
 
     @ManyToOne
     @JoinColumn(name = "customer_id")
     private Customer customer;
-
-    @OneToOne
-    @JoinColumn(name = "staff_id")
-    private Staff staff;
 }
