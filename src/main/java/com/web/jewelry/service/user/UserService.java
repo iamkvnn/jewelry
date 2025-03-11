@@ -7,12 +7,17 @@ import com.web.jewelry.enums.EUserStatus;
 import com.web.jewelry.exception.AlreadyExistException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Customer;
+import com.web.jewelry.model.Manager;
 import com.web.jewelry.model.Staff;
 import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
+import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -24,6 +29,22 @@ public class UserService implements IUserService {
     private final StaffRepository staffRepository;
     private final ModelMapper modelMapper;
     private final CustomerRepository customerRepository;
+    private final ManagerRepository managerRepository;
+
+    @Override
+    public Page<Staff> getAllStaff(Pageable pageable) {
+        return staffRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Customer> getAllCustomers(Pageable pageable) {
+        return customerRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Manager> getAllManagers(Pageable pageable) {
+        return null;
+    }
 
     @Override
     public User createStaff(UserRequest request) {
@@ -76,6 +97,11 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public User getManagerById(Long id) {
+        return managerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+    }
+
+    @Override
     public User updateStaff(UserRequest request, Long id) {
         return staffRepository.findById(id)
                 .map(staff -> {
@@ -99,6 +125,19 @@ public class UserService implements IUserService {
                     return customerRepository.save(customer);
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    }
+
+    @Override
+    public User updateManager(UserRequest request, Long id) {
+        return managerRepository.findById(id)
+                .map(manager -> {
+                    manager.setPhone(request.getPhone());
+                    manager.setFullName(request.getFullName());
+                    manager.setDob(request.getDob());
+                    manager.setGender(request.getGender());
+                    return managerRepository.save(manager);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
     }
 
     @Override
