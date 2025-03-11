@@ -24,11 +24,14 @@ public abstract class User {
     private String password;
     private String email;
     private String fullName;
+    @Enumerated(EnumType.STRING)
     private EGender gender;
     private String phone;
     private LocalDate dob;
     private String avatar;
+    @Enumerated(EnumType.STRING)
     private EUserRole role;
+    @Enumerated(EnumType.STRING)
     private EUserStatus status;
     private LocalDateTime joinAt;
 }

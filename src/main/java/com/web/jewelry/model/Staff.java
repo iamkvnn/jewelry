@@ -18,9 +18,6 @@ import java.util.Set;
 @SuperBuilder
 @Entity
 public class Staff extends User{
-    @OneToOne(mappedBy = "staff")
-    private Address address;
-
     @JsonIgnore
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserNotification> notifications;

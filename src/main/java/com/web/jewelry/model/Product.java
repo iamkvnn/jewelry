@@ -24,6 +24,7 @@ public class Product {
     @Column(length = 16777216)
     private String description;
     private String material;
+    @Enumerated(EnumType.STRING)
     private EProductStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
