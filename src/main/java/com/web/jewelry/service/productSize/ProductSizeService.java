@@ -2,6 +2,7 @@ package com.web.jewelry.service.productSize;
 
 import com.web.jewelry.dto.request.ProductSizeRequest;
 import com.web.jewelry.exception.AlreadyExistException;
+import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Product;
 import com.web.jewelry.model.ProductSize;
 import com.web.jewelry.repository.ProductSizeRepository;
@@ -17,6 +18,11 @@ public class ProductSizeService implements IProductSizeService {
     private final ProductSizeRepository productSizeRepository;
 
     @Override
+    public ProductSize getProductSize(Long id) {
+        return productSizeRepository.findById(id).orElseThrow(() -> new AlreadyExistException("Product size not found"));
+    }
+
+    @Override
     public List<ProductSize> addProductSize(Product product, List<ProductSizeRequest> request) {
         return request.stream().map(productSizeRequest -> {
             if (productSizeRepository.existsBySizeAndProductId(productSizeRequest.getSize(), product.getId())) {
@@ -30,7 +36,6 @@ public class ProductSizeService implements IProductSizeService {
                     .sold(0L)
                     .discountPrice(productSizeRequest.getDiscountPrice())
                     .discountRate(productSizeRequest.getDiscountRate())
-                    .createdAt(LocalDateTime.now())
                     .build());
         }).distinct().toList();
     }
@@ -46,7 +51,6 @@ public class ProductSizeService implements IProductSizeService {
                     ProductSize productSize = productSizeRepository.findBySizeAndProductId(productSizeRequest.getSize(), product.getId())
                             .orElseGet(() -> ProductSize.builder()
                                     .product(product)
-                                    .createdAt(LocalDateTime.now())
                                     .build());
                     productSize.setSold(productSizeRequest.getSold());
                     productSize.setSize(productSizeRequest.getSize());
@@ -56,5 +60,36 @@ public class ProductSizeService implements IProductSizeService {
                     productSize.setDiscountRate(productSizeRequest.getDiscountRate());
                     return productSizeRepository.save(productSize);
                 }).distinct().toList();
+    }
+
+    @Override
+    public void decreaseStock(Long id, Long quantity) {
+        ProductSize productSize = getProductSize(id);
+        if (productSize.getStock() < quantity) {
+            throw new ResourceNotFoundException("Not enough stock for this product");
+        }
+        productSize.setStock(productSize.getStock() - quantity);
+        productSizeRepository.save(productSize);
+    }
+
+    @Override
+    public void increaseStock(Long id, Long quantity) {
+        ProductSize productSize = getProductSize(id);
+        productSize.setStock(productSize.getStock() + quantity);
+        productSizeRepository.save(productSize);
+    }
+
+    @Override
+    public void increaseSold(Long id, Long quantity) {
+        ProductSize productSize = getProductSize(id);
+        productSize.setSold(productSize.getSold() + quantity);
+        productSizeRepository.save(productSize);
+    }
+
+    @Override
+    public void decreaseSold(Long id, Long quantity) {
+        ProductSize productSize = getProductSize(id);
+        productSize.setSold(productSize.getSold() - quantity);
+        productSizeRepository.save(productSize);
     }
 }

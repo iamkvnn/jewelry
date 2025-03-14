@@ -16,13 +16,17 @@ public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long unitPrice;
     private Long quantity;
+    private boolean isChecked;
+    private boolean isInCheckout;
     private LocalDateTime addedAt;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @JoinColumn(name = "product_size_id")
+    private ProductSize productSize;
+
+    @OneToOne(mappedBy = "cartItem")
+    private OrderItem orderItem;
 
     @JsonIgnore
     @ManyToOne

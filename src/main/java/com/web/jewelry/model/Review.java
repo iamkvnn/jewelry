@@ -1,6 +1,5 @@
 package com.web.jewelry.model;
 
-import com.web.jewelry.dto.response.ReviewResponse;
 import jakarta.persistence.*;
 import lombok.*;
 

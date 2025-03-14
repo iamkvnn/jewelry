@@ -22,8 +22,6 @@ public class ProductSize {
     private Long sold;
     private Long discountPrice;
     private Long discountRate;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     @JsonIgnore
     @ManyToOne

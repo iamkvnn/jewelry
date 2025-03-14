@@ -11,5 +11,5 @@ public class AddressResponse {
     private String district;
     private String village;
     private String address;
-    private Boolean isDefault;
+    private boolean isDefault;
 }

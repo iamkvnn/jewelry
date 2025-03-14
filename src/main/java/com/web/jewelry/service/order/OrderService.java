@@ -1,67 +1,142 @@
 package com.web.jewelry.service.order;
 
-import com.web.jewelry.dto.request.OrderRequest;
-import com.web.jewelry.dto.response.CartItemResponse;
-import com.web.jewelry.dto.response.OrderResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.web.jewelry.dto.response.*;
 import com.web.jewelry.enums.EOrderStatus;
+import com.web.jewelry.enums.EPaymentMethod;
+import com.web.jewelry.enums.EShippingMethod;
+import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
-import com.web.jewelry.model.Cart;
-import com.web.jewelry.model.CartItem;
-import com.web.jewelry.model.Order;
-import com.web.jewelry.model.OrderItem;
+import com.web.jewelry.model.*;
+import com.web.jewelry.repository.OrderItemRepository;
 import com.web.jewelry.repository.OrderRepository;
+import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import lombok.RequiredArgsConstructor;
-import org.aspectj.weaver.ast.Or;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
-public class OrderService implements IOderService {
+public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final IProductSizeService productSizeService;
+    private final IAddressService addressService;
     private final ICartService cartService;
     private final ModelMapper modelMapper;
+    private final RestTemplate restTemplate;
+
+    @Value("${ghtk.url.fee}")
+    private String url;
+    @Value("${ghtk.Token}")
+    private String token;
+    @Value("${ghtk.X-Client-Source}")
+    private String clientSource;
 
     @Transactional
     @Override
-    public Order placeOrder(Long customerId, OrderRequest request) {
+    public Order placeOrder(Long customerId) {
         Cart cart = cartService.getCartByCustomerId(customerId);
-        Long totalPrice = request.getCartItems().stream()
-                .mapToLong(CartItemResponse::getTotalPrice)
-                .sum();
+        Address address = addressService.getCustomerDefaultAddress(customerId);
         Order order = Order.builder()
                 .customer(cart.getCustomer())
-                .totalPrice(totalPrice)
-                .status(EOrderStatus.PENDING)
-                .paymentMethod(request.getPaymentMethod())
+                .shippingAddress(address)
+                .shippingMethod(EShippingMethod.STANDARD)
+                .status(EOrderStatus.CHECKOUT)
+                .paymentMethod(EPaymentMethod.COD)
+                .isReviewed(false)
                 .orderDate(LocalDateTime.now())
                 .build();
-        List<OrderItem> orderItems = createOrderItems(order, cart, request);
+        List<OrderItem> orderItems = createOrderItems(order, cart);
+        Long total = orderItems.stream()
+                .map(orderItem -> orderItem.getProductSize().getPrice() * orderItem.getQuantity())
+                .reduce(0L, Long::sum);
+        order.setTotalProductPrice(total);
+        Long shippingFee = getEstimateShippingFee(address.getDistrict(), address.getProvince(), EShippingMethod.STANDARD);
+        order.setShippingFee(shippingFee);
+        order.setTotalPrice(total + shippingFee);
         order.setOrderItems(orderItems);
         return orderRepository.save(order);
     }
 
-    private List<OrderItem> createOrderItems(Order order, Cart cart, OrderRequest request) {
-        return request.getCartItems().stream()
-                .map(CItem -> cartService.getCartItem(cart.getId(), CItem.getSize().getId()))
-                .map(cartItem -> {
-                    productSizeService.decreaseStock(cartItem.getProductSize().getId(), cartItem.getQuantity());
+    private List<OrderItem> createOrderItems(Order order, Cart cart) {
+        return cartService.getCheckedItem(cart.getId()).stream()
+                .filter(item -> !item.isInCheckout())
+                .map(CItem -> {
+                    cartService.setCheckout(CItem.getId());
+                    productSizeService.decreaseStock(CItem.getProductSize().getId(), CItem.getQuantity());
+                    productSizeService.increaseSold(CItem.getProductSize().getId(), CItem.getQuantity());
                     return OrderItem.builder()
                             .order(order)
-                            .productSize(cartItem.getProductSize())
-                            .quantity(cartItem.getQuantity())
+                            .productSize(CItem.getProductSize())
+                            .quantity(CItem.getQuantity())
+                            .cartItem(CItem)
                             .build();
                 })
                 .toList();
+    }
+
+    @Override
+    public Order updateOrderInfo(Long orderId, Long customerId, String note, EPaymentMethod paymentMethod, EShippingMethod shippingMethod) {
+        Order order = getOrder(orderId);
+        if (order.getStatus() != EOrderStatus.CHECKOUT) {
+            throw new BadRequestException("Cannot update order that is not in checkout status");
+        }
+        if (!order.getCustomer().getId().equals(customerId)) {
+            throw new ResourceNotFoundException("Order not found");
+        }
+        order.setNote(note);
+        order.setPaymentMethod(paymentMethod != null ? paymentMethod : order.getPaymentMethod());
+        if(shippingMethod != null && !order.getShippingMethod().equals(shippingMethod)) {
+            order.setShippingMethod(shippingMethod);
+            order.setShippingFee(getEstimateShippingFee(order.getShippingAddress().getDistrict(), order.getShippingAddress().getProvince(), shippingMethod));
+            order.setTotalPrice(order.getTotalProductPrice() + order.getShippingFee());
+        }
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    @Override
+    public void completeOrder(Long orderId) {
+        Order order = getOrder(orderId);
+        order.setStatus(EOrderStatus.PENDING);
+        order.getOrderItems().forEach(orderItem -> {
+            cartService.completeCheckout(orderItem.getCartItem().getId());
+            orderItem.setCartItem(null);
+            orderItemRepository.save(orderItem);
+        });
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    @Override
+    public void cancelCheckout(Long customerId, Long orderId) {
+        Order order = getOrder(orderId);
+        if (order.getStatus() != EOrderStatus.CHECKOUT) {
+            throw new BadRequestException("Cannot cancel order that is not in checkout status");
+        }
+        if (!order.getCustomer().getId().equals(customerId)) {
+            throw new ResourceNotFoundException("Order not found");
+        }
+        order.getOrderItems().forEach(orderItem -> {
+            productSizeService.increaseStock(orderItem.getProductSize().getId(), orderItem.getQuantity());
+            productSizeService.decreaseSold(orderItem.getProductSize().getId(), orderItem.getQuantity());
+            cartService.cancelCheckout(orderItem.getCartItem().getId());
+        });
+        orderRepository.delete(order);
     }
 
     @Override
@@ -92,8 +167,56 @@ public class OrderService implements IOderService {
     }
 
     @Override
+    public Long getEstimateShippingFee(String district, String province, EShippingMethod method) {
+        Map<String, Object> requestBody = getBody(district, province, method);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("Token", token);
+        headers.add("X-Client-Source", clientSource);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(response.getBody());
+            return jsonNode.path("fee").path("fee").asLong();
+        } catch (Exception e) {
+            throw new BadRequestException("Cannot get shipping fee");
+        }
+    }
+
+    private Map<String, Object> getBody(String district, String province, EShippingMethod method) {
+        String transport = switch (method) {
+            case STANDARD -> "road";
+            case EXPRESS -> "fly";
+        };
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("pick_province", "TP. Hồ Chí Minh");
+        requestBody.put("pick_district", "Thành phố Thủ Đức");
+        requestBody.put("province", province);
+        requestBody.put("district", district);
+        requestBody.put("weight", 150);
+        requestBody.put("transport", transport);
+        requestBody.put("deliver_option", "none");
+        return requestBody;
+    }
+
+    @Override
     public OrderResponse convertToResponse(Order order) {
-        return modelMapper.map(order, OrderResponse.class);
+        OrderResponse response = modelMapper.map(order, OrderResponse.class);
+        Set<OrderItemResponse> orderItems = order.getOrderItems().stream()
+                .map(orderItem -> {
+                    OrderItemResponse item = modelMapper.map(orderItem, OrderItemResponse.class);
+                    ProductSize productSize = orderItem.getProductSize();
+                    item.setProduct(modelMapper.map(productSize.getProduct(), ProductResponse.class));
+                    item.setTotalPrice(productSize.getPrice() * orderItem.getQuantity());
+                    return item;
+                })
+                .collect(Collectors.toSet());
+        response.setOrderItems(orderItems);
+        return response;
     }
 
     @Override

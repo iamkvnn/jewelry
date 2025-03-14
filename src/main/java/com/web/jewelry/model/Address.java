@@ -3,6 +3,8 @@ package com.web.jewelry.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,9 +21,12 @@ public class Address {
     private String district;
     private String village;
     private String address;
-    private Boolean isDefault;
+    private boolean isDefault;
 
     @ManyToOne
     @JoinColumn(name = "customer_id")
     private Customer customer;
+
+    @OneToMany(mappedBy = "shippingAddress")
+    private List<Order> orders;
 }

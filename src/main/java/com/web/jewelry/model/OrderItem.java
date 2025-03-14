@@ -13,14 +13,17 @@ public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long price;
     private Long quantity;
 
     @ManyToOne
     @JoinColumn(name = "order_id")
     private Order order;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @OneToOne
+    @JoinColumn(name = "cart_item_id")
+    private CartItem cartItem;
+
+    @ManyToOne  
+    @JoinColumn(name = "product_size_id")
+    private ProductSize productSize;
 }

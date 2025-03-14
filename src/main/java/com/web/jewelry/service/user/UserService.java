@@ -2,6 +2,7 @@ package com.web.jewelry.service.user;
 
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.enums.EUserStatus;
 import com.web.jewelry.exception.AlreadyExistException;
@@ -13,6 +14,7 @@ import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
+import com.web.jewelry.service.cart.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,7 @@ public class UserService implements IUserService {
     private final ModelMapper modelMapper;
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
+    private final ICartService cartService;
 
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
@@ -71,7 +74,7 @@ public class UserService implements IUserService {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistException("Email already exists");
         }
-        return customerRepository.save(Customer.builder()
+        Customer user = customerRepository.save(Customer.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(request.getPassword())
@@ -79,11 +82,16 @@ public class UserService implements IUserService {
                 .fullName(request.getFullName())
                 .dob(request.getDob())
                 .gender(request.getGender())
+                .totalSpent(0L)
+                .membershipRank(EMembershiprank.MEMBER)
+                .isSubscribedForNews(false)
                 .status(EUserStatus.ACTIVE)
                 .role(EUserRole.ROLE_CUSTOMER)
                 .joinAt(LocalDateTime.now())
                 .build()
         );
+        cartService.initializeNewCart(user);
+        return user;
     }
 
     @Override
