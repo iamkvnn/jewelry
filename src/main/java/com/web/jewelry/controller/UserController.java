@@ -3,10 +3,15 @@ package com.web.jewelry.controller;
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -14,6 +19,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("${api.prefix}/users")
 public class UserController {
     private final IUserService userService;
+
+    @GetMapping("/customers")
+    public ResponseEntity<ApiResponse> getAllCustomer(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size){
+        Page<Customer> customers = userService.getAllCustomers(PageRequest.of(page-1, size));
+        Page<UserResponse> response = userService.convertToUserResponse(customers);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
 
     @GetMapping("/customers/{id}")
     public ResponseEntity<ApiResponse> getCustomer(@PathVariable Long id) {

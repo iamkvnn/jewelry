@@ -37,4 +37,8 @@ public class Customer extends User {
     @JsonIgnore
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserNotification> notifications;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WishlistItem> wishlistItems;
 }
