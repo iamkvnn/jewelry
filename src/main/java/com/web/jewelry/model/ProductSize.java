@@ -22,6 +22,7 @@ public class ProductSize {
     private Long sold;
     private Long discountPrice;
     private Long discountRate;
+    private boolean isDeleted;
 
     @JsonIgnore
     @ManyToOne

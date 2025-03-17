@@ -1,5 +1,7 @@
 package com.web.jewelry.controller;
 
+import com.web.jewelry.dto.request.OrderRequest;
+import com.web.jewelry.dto.response.AddressResponse;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.OrderResponse;
 import com.web.jewelry.enums.EOrderStatus;
@@ -32,6 +34,12 @@ public class OrderController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponses));
     }
 
+    @GetMapping("/shipping-fee")
+    public ResponseEntity<ApiResponse> getEstimateShippingFee(@RequestBody AddressResponse address, @RequestParam EShippingMethod method) {
+        Long fee = orderService.getEstimateShippingFee(address.getDistrict(), address.getProvince(), method);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", fee));
+    }
+
     @GetMapping("/all")
     public ResponseEntity<ApiResponse> getOrders(@RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
         Page<Order> orders = orderService.getOrders(page, size);
@@ -40,8 +48,8 @@ public class OrderController {
     }
 
     @PostMapping("/place/{customerId}")
-    public ResponseEntity<ApiResponse> placeOrder(@PathVariable Long customerId) {
-        Order order = orderService.placeOrder(customerId);
+    public ResponseEntity<ApiResponse> placeOrder(@PathVariable Long customerId, @RequestBody OrderRequest orderRequest) {
+        Order order = orderService.placeOrder(customerId, orderRequest);
         OrderResponse orderResponse = orderService.convertToResponse(order);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
     }
@@ -51,19 +59,5 @@ public class OrderController {
         Order order = orderService.updateOrderStatus(id, status);
         OrderResponse orderResponse = orderService.convertToResponse(order);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
-    }
-
-    @PutMapping("/{id}/update")
-    public ResponseEntity<ApiResponse> updateOrderInfo(@PathVariable Long id, @RequestParam Long customerId, @RequestParam(required = false) String note,
-                                                       @RequestParam(required = false) EPaymentMethod paymentMethod, @RequestParam(required = false) EShippingMethod shippingMethod) {
-        Order order = orderService.updateOrderInfo(id, customerId, note, paymentMethod, shippingMethod);
-        OrderResponse orderResponse = orderService.convertToResponse(order);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
-    }
-
-    @DeleteMapping("{id}/cancel-checkout")
-    public ResponseEntity<ApiResponse> cancelCheckout(@PathVariable Long id, @RequestParam Long customerId) {
-        orderService.cancelCheckout(customerId, id);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 }

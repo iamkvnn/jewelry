@@ -8,13 +8,8 @@ import java.util.List;
 
 public interface IProductSizeService {
     ProductSize getProductSize(Long id);
+    List<ProductSize> getProductSizesByIds(List<Long> ids);
     List<ProductSize> addProductSize(Product product, List<ProductSizeRequest> request);
     List<ProductSize> updateProductSize(Product product, List<ProductSizeRequest> request);
-    void decreaseStock(Long id, Long quantity);
-
-    void increaseStock(Long id, Long quantity);
-
-    void increaseSold(Long id, Long quantity);
-
-    void decreaseSold(Long id, Long quantity);
+    void updateStockAndSold(List<ProductSize> productSizes);
 }

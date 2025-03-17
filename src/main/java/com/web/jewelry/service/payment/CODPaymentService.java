@@ -26,9 +26,6 @@ public class CODPaymentService implements IPaymentService {
     @Override
     public Payment createPayment(Long orderId) {
         Order order = orderService.getOrder(orderId);
-        if (!order.getStatus().equals(EOrderStatus.CHECKOUT)) {
-            throw new BadRequestException("Order is not ready for payment");
-        }
         if (order.getPaymentMethod().equals(EPaymentMethod.COD)) {
             CODPayment payment = CODPayment.builder()
                     .order(order)
@@ -38,7 +35,6 @@ public class CODPaymentService implements IPaymentService {
                     .status(EPaymentStatus.PROCESSING)
                     .paymentDate(LocalDateTime.now())
                     .build();
-            orderService.completeOrder(order.getId());
             return codPaymentRepository.save(payment);
         }
         return null;

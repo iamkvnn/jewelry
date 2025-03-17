@@ -7,7 +7,9 @@ import lombok.Data;
 public class OrderItemResponse {
     private Long id;
     private ProductResponse product;
-    private ProductSize size;
+    private ProductSize productSize;
     private Long quantity;
+    private Long price;
+    private Long discountPrice;
     private Long totalPrice;
 }

@@ -17,6 +17,8 @@ public class OrderResponse {
     private EShippingMethod shippingMethod;
     private Long shippingFee;
     private Long totalPrice;
+    private Long freeShipDiscount;
+    private Long promotionDiscount;
     private EPaymentMethod paymentMethod;
     private EOrderStatus status;
     private String note;

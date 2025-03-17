@@ -10,8 +10,4 @@ import java.util.Optional;
 
 public interface ProductSizeRepository extends JpaRepository<ProductSize, Long> {
     Optional<ProductSize> findBySizeAndProductId(String size, Long id);
-    @Modifying
-    @Query("delete from ProductSize s where s.product.id = ?1 and s.size = ?2")
-    void deleteByProductIdAndSize(Long productId, String size);
-    boolean existsBySizeAndProductId(String size, Long id);
 }

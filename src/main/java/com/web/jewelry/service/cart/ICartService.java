@@ -16,17 +16,10 @@ public interface ICartService {
     Cart getCartByCustomerId(Long id);
     public void addItemToCart(Long cartId, Long productSizeId, Long quantity);
     void removeItemFromCart(Long cartId, Long productSizeId);
+    void removeItemsFromCart(Long cartId, List<Long> productSizeIds);
     void updateItemQuantity(Long cartId, Long productSizeId, Long quantity);
     void changeSize(Long cartId, Long oldProductSize, Long newProductSize);
     CartItem getCartItem(Long cartId, Long productSizeId);
-    public CartItem getCartItemById(Long cartItemId);
-    Cart checkItem(Long cartId, Long productSizeId);
-    Cart unCheckItem(Long cartId, Long productSizeId);
-    Cart checkAllItems(Long cartId);
-    Cart unCheckAllItems(Long cartId);
-    void setCheckout(Long cartItemId);
-    void cancelCheckout(Long cartItemId);
-    void completeCheckout(Long cartItemId);
-    List<CartItem> getCheckedItem(Long cartId);
+    CartItem getCartItemById(Long cartId, Long cartItemId);
     CartResponse convertToCartResponse(Cart cart);
 }

@@ -52,34 +52,6 @@ public class CartController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
-    @PutMapping("/{cartId}/check")
-    public ResponseEntity<ApiResponse> checkItem(@PathVariable Long cartId, @RequestParam Long productSizeId) {
-        Cart cart = cartService.checkItem(cartId, productSizeId);
-        CartResponse cartResponse = cartService.convertToCartResponse(cart);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", cartResponse));
-    }
-
-    @PutMapping("/{cartId}/uncheck")
-    public ResponseEntity<ApiResponse> uncheckItem(@PathVariable Long cartId, @RequestParam Long productSizeId) {
-        Cart cart = cartService.unCheckItem(cartId, productSizeId);
-        CartResponse cartResponse = cartService.convertToCartResponse(cart);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", cartResponse));
-    }
-
-    @PutMapping("/{cartId}/check-all")
-    public ResponseEntity<ApiResponse> checkAll(@PathVariable Long cartId) {
-        Cart cart = cartService.checkAllItems(cartId);
-        CartResponse cartResponse = cartService.convertToCartResponse(cart);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", cartResponse));
-    }
-
-    @PutMapping("/{cartId}/uncheck-all")
-    public ResponseEntity<ApiResponse> uncheckAll(@PathVariable Long cartId) {
-        Cart cart = cartService.unCheckAllItems(cartId);
-        CartResponse cartResponse = cartService.convertToCartResponse(cart);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", cartResponse));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> clearCart(@PathVariable Long id) {
         cartService.clearCart(id);

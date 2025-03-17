@@ -23,6 +23,8 @@ public class Order {
     private Long totalProductPrice;
     private Long totalPrice;
     private Long shippingFee;
+    private Long freeShipDiscount;
+    private Long promotionDiscount;
     @Enumerated(EnumType.STRING)
     private EShippingMethod shippingMethod;
     @Enumerated(EnumType.STRING)
@@ -46,4 +48,12 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "address_id")
     private Address shippingAddress;
+
+    @ManyToMany
+    @JoinTable(
+            name = "order_vouchers",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name = "voucher_id")
+    )
+    private List<Voucher> vouchers;
 }

@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 public class CartItemResponse {
     private Long id;
     private ProductResponse product;
-    private ProductSize size;
+    private ProductSizeResponse productSize;
     private Long quantity;
-    private Long totalPrice;
-    private boolean isChecked;
-    private boolean isInCheckout;
     private LocalDateTime addedAt;
 }
