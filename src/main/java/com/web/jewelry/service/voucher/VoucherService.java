@@ -11,6 +11,7 @@ import com.web.jewelry.model.Voucher;
 import com.web.jewelry.model.VoucherApplicability;
 import com.web.jewelry.repository.VoucherApplicabilityRepository;
 import com.web.jewelry.repository.VoucherRepository;
+import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.List;
 public class VoucherService implements IVoucherService {
     private final VoucherRepository voucherRepository;
     private final VoucherApplicabilityRepository voucherApplicabilityRepository;
+    private final IUserService userService;
     private final ModelMapper modelMapper;
 
     @Override
@@ -161,11 +163,21 @@ public class VoucherService implements IVoucherService {
         }
         vouchers.forEach(voucher -> {
             checkValidDate(voucher);
-            if (voucher.getType() == EVoucherType.PROMOTION) {
-                if (voucher.getMinimumToApply() != null && request.getTotalProductPrice() < voucher.getMinimumToApply()) {
-                    throw new BadRequestException("Minimum order value is not met");
-                }
+            if (voucher.getMinimumToApply() != null && request.getTotalProductPrice() < voucher.getMinimumToApply()) {
+                throw new BadRequestException("Minimum order value is not met");
             }
+            voucher.getVoucherApplicabilities().stream().filter(voucherApplicability -> switch (voucherApplicability.getType()) {
+                case PRODUCT -> request.getCartItems().stream().map(
+                        cartItem -> cartItem.getProduct().getId()
+                ).toList().contains(voucherApplicability.getApplicableObjectId());
+                case CATEGORY -> request.getCartItems().stream().map(
+                        cartItem -> cartItem.getProduct().getCategory() != null ? cartItem.getProduct().getCategory().getId() : Long.valueOf(-1)
+                ).toList().contains(voucherApplicability.getApplicableObjectId());
+                case COLLECTION -> request.getCartItems().stream().map(
+                        cartItem -> cartItem.getProduct().getCollection() != null ? cartItem.getProduct().getCollection().getId() : Long.valueOf(-1)
+                ).toList().contains(voucherApplicability.getApplicableObjectId());
+                case CUSTOMER -> userService.getCurrentUser().getId().equals(voucherApplicability.getApplicableObjectId());
+            }).findFirst().orElseThrow(() -> new BadRequestException("Invalid voucher applicability"));
         });
         return vouchers;
     }
