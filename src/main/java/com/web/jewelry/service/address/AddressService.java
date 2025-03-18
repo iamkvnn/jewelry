@@ -2,17 +2,20 @@ package com.web.jewelry.service.address;
 
 import com.web.jewelry.dto.request.AddressRequest;
 import com.web.jewelry.dto.response.AddressResponse;
+import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Address;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.repository.AddressRepository;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class AddressService implements IAddressService{
@@ -23,6 +26,7 @@ public class AddressService implements IAddressService{
     @Override
     public Address addAddress(Long customerId, AddressRequest request) {
         Customer customer = (Customer) userService.getCustomerById(customerId);
+        boolean isDefault = !addressRepository.existsByCustomerId(customerId);
         return addressRepository.save(Address.builder()
                 .customer(customer)
                 .recipientName(request.getRecipientName())
@@ -31,7 +35,7 @@ public class AddressService implements IAddressService{
                 .district(request.getDistrict())
                 .village(request.getVillage())
                 .address(request.getAddress())
-                .isDefault(false)
+                .isDefault(isDefault)
                 .build());
     }
 
@@ -49,6 +53,14 @@ public class AddressService implements IAddressService{
     }
 
     @Override
+    public void setDefaultAddress(Long customerId, Long addressId){
+        addressRepository.findAllByCustomerId(customerId, Pageable.unpaged()).forEach(address -> {
+            address.setDefault(address.getId().equals(addressId));
+            addressRepository.save(address);
+        });
+    }
+
+    @Override
     public Address getAddressById(Long id) {
         return addressRepository.findById(id).orElseThrow(() -> new RuntimeException("Address not found"));
     }
@@ -59,8 +71,18 @@ public class AddressService implements IAddressService{
     }
 
     @Override
+    public Address getCustomerDefaultAddress(Long customerId) {
+        return addressRepository.findByCustomerIdAndIsDefault(customerId, true).orElseThrow(() -> new ResourceNotFoundException("Default address not found"));
+    }
+
+    @Override
     public void deleteAddress(Long id) {
-        addressRepository.findById(id).ifPresentOrElse(addressRepository::delete, () -> {
+        addressRepository.findById(id).ifPresentOrElse(address -> {
+            if (address.isDefault()) {
+                throw new BadRequestException("Cannot delete default address");
+            }
+            addressRepository.delete(address);
+        }, () -> {
             throw new ResourceNotFoundException("Address not found");
         });
     }

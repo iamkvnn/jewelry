@@ -22,8 +22,7 @@ public class ProductSize {
     private Long sold;
     private Long discountPrice;
     private Long discountRate;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private boolean isDeleted;
 
     @JsonIgnore
     @ManyToOne

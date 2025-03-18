@@ -8,7 +8,6 @@ public class ProductSizeRequest {
     private String size;
     private Long stock;
     private Long price;
-    private Long sold;
     private Long discountPrice;
     private Long discountRate;
 }

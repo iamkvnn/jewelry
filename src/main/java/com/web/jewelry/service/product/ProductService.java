@@ -1,6 +1,7 @@
 package com.web.jewelry.service.product;
 
 import com.web.jewelry.dto.request.ProductRequest;
+import com.web.jewelry.dto.request.ProductSizeRequest;
 import com.web.jewelry.dto.response.ProductResponse;
 import com.web.jewelry.enums.EProductStatus;
 import com.web.jewelry.exception.AlreadyExistException;
@@ -21,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -46,6 +49,7 @@ public class ProductService implements IProductService {
     @Transactional
     @Override
     public ProductResponse updateProduct(Long productId, ProductRequest request) {
+        validateProductSizes(request.getProductSizes());
         return productRepository.findById(productId)
                 .map(product -> {
                     if (existsByTitle(request.getTitle()) && !product.getTitle().equals(request.getTitle())) {
@@ -59,10 +63,7 @@ public class ProductService implements IProductService {
                 .map(product -> {
                     Optional.ofNullable(request.getAttributes())
                             .ifPresent(attributes -> product.setAttributes(attributeValueService.updateProductAttributes(product, attributes)));
-                    Optional.ofNullable(request.getProductSizes())
-                            .ifPresentOrElse(productSizes -> product.setProductSizes(productSizeService.updateProductSize(product, productSizes))
-                                    , () -> {throw new BadRequestException("Product size is required");}
-                            );
+                    product.setProductSizes(productSizeService.updateProductSize(product, request.getProductSizes()));
                     return product;
                 })
                 .map(this::convertToProductResponse)
@@ -73,6 +74,7 @@ public class ProductService implements IProductService {
         product.setTitle(request.getTitle());
         product.setDescription(request.getDescription());
         product.setMaterial(request.getMaterial());
+        product.setUpdatedAt(LocalDateTime.now());
         product.setCategory(category);
         product.setCollection(collection);
         return product;
@@ -81,6 +83,7 @@ public class ProductService implements IProductService {
     @Transactional
     @Override
     public ProductResponse addProduct(ProductRequest request) {
+        validateProductSizes(request.getProductSizes());
         if (existsByTitle(request.getTitle())) {
             throw new AlreadyExistException("Product title already exists please check again!");
         }
@@ -97,18 +100,31 @@ public class ProductService implements IProductService {
                 .build());
         Optional.ofNullable(request.getAttributes())
                 .ifPresent(attributes -> product.setAttributes(attributeValueService.addProductAttributes(product, attributes)));
-        Optional.ofNullable(request.getProductSizes())
-                .ifPresentOrElse(productSizes -> product.setProductSizes(productSizeService.addProductSize(product, productSizes))
-                        , () -> {throw new BadRequestException("Product size is required");}
-                );
+        product.setProductSizes(productSizeService.addProductSize(product, request.getProductSizes()));
         return convertToProductResponse(product);
+    }
+
+    private void validateProductSizes(List<ProductSizeRequest> request) {
+        if (request == null || request.isEmpty()) {
+            throw new BadRequestException("Product size is required");
+        }
+        Map<String, Long> sizeFrequency = request.stream()
+                .collect(Collectors.groupingBy(ProductSizeRequest::getSize, Collectors.counting()));
+
+        List<String> duplicateSizes = sizeFrequency.entrySet().stream()
+                .filter(entry -> entry.getValue() > 1)
+                .map(Map.Entry::getKey)
+                .toList();
+        if (!duplicateSizes.isEmpty()) {
+            throw new BadRequestException("Duplicate sizes found");
+        }
     }
 
     @Override
     public void deleteProduct(Long productId) {
-        productRepository.findById(productId).ifPresentOrElse(productRepository::delete,
-                                () -> {throw new ResourceNotFoundException("Product not found");
-                                });
+        Product product = getProductById(productId);
+        product.setStatus(EProductStatus.NOT_AVAILABLE);
+        productRepository.save(product);
     }
 
     @Override

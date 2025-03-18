@@ -50,8 +50,8 @@ public class ProductController {
     }
 
     @GetMapping("/search")
-    ResponseEntity<ApiResponse> searchProduct(@RequestParam String title, @RequestParam int page, @RequestParam int size) {
-        Page<ProductResponse> product = productService.findByTitleContaining(title, PageRequest.of(page, size));
+    ResponseEntity<ApiResponse> searchProduct(@RequestParam String title, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<ProductResponse> product = productService.findByTitleContaining(title, PageRequest.of(page - 1, size));
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 }

@@ -1,7 +1,5 @@
-package com.web.jewelry.dto.response;
+package com.web.jewelry.model;
 
-import com.web.jewelry.model.Review;
-import com.web.jewelry.model.Staff;
 import jakarta.persistence.*;
 import lombok.*;
 

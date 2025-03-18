@@ -25,6 +25,10 @@ public interface IUserService {
     User getCustomerById(Long id);
     User getManagerById(Long id);
 
+    User getCustomerByUsername(String username);
+    User getManagerByUsername(String username);
+    User getStaffByUsername(String username);
+
     void deactivateStaff(Long id);
     void activateStaff(Long id);
     void deactivateCustomer(Long id);
@@ -36,5 +40,7 @@ public interface IUserService {
     User updateCurrentUser(UserRequest request);
     User deleteCurrentUser();
 
-    UserResponse convertToUserResponse(User user);
+    <T> UserResponse convertToUserResponse(T user);
+    <T> Page<UserResponse> convertToUserResponse(Page<T> users);
+
 }

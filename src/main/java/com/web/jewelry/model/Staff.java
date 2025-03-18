@@ -1,11 +1,9 @@
 package com.web.jewelry.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.web.jewelry.dto.response.ReviewResponse;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 

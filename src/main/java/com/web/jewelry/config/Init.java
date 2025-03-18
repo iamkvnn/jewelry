@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.lang.NonNull;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @Component
 public class Init implements ApplicationListener<ApplicationReadyEvent> {
     private final ManagerRepository managerRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void onApplicationEvent(@NonNull ApplicationReadyEvent event) {
@@ -28,9 +30,9 @@ public class Init implements ApplicationListener<ApplicationReadyEvent> {
             managerRepository.save(Manager.builder()
                     .username("manager")
                     .email("23110119@student.hcmute.edu.vn")
-                    .password("123456")
+                    .password(passwordEncoder.encode("123456"))
                     .fullName("Manager")
-                    .role(EUserRole.ROLE_MANAGER)
+                    .role(EUserRole.MANAGER)
                     .status(EUserStatus.ACTIVE)
                     .joinAt(LocalDateTime.now())
                     .build());

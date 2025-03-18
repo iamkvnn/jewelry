@@ -19,19 +19,19 @@ import java.time.LocalDateTime;
 public abstract class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String username;
-    private String password;
-    private String email;
-    private String fullName;
+    protected Long id;
+    protected String username;
+    protected String password;
+    protected String email;
+    protected String fullName;
     @Enumerated(EnumType.STRING)
-    private EGender gender;
-    private String phone;
-    private LocalDate dob;
-    private String avatar;
+    protected EGender gender;
+    protected String phone;
+    protected LocalDate dob;
+    protected String avatar;
     @Enumerated(EnumType.STRING)
-    private EUserRole role;
+    protected EUserRole role;
     @Enumerated(EnumType.STRING)
-    private EUserStatus status;
-    private LocalDateTime joinAt;
+    protected EUserStatus status;
+    protected LocalDateTime joinAt;
 }

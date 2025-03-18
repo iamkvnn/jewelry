@@ -16,16 +16,19 @@ public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long unitPrice;
     private Long quantity;
     private LocalDateTime addedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "product_size_id")
+    private ProductSize productSize;
 
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
 
     @JsonIgnore
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id")
     private Cart cart;
 }
