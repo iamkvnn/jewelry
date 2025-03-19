@@ -20,7 +20,7 @@ public class Image {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
 }

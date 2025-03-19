@@ -37,8 +37,8 @@ public class ProductService implements IProductService {
     private final ModelMapper modelMapper;
 
     @Override
-    public List<ProductResponse> getAllProducts() {
-        return convertToProductResponses(productRepository.findAll());
+    public Page<ProductResponse> getAllProducts(Pageable pageable) {
+        return convertToProductResponses(productRepository.findAll(pageable));
     }
 
     @Override
@@ -140,8 +140,8 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public List<ProductResponse> convertToProductResponses(List<Product> products) {
-        return products.stream().map(this::convertToProductResponse).toList();
+    public Page<ProductResponse> convertToProductResponses(Page<Product> products) {
+        return products.map(this::convertToProductResponse);
     }
 
     @Override

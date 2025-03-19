@@ -20,8 +20,8 @@ public class ProductController {
     private final IProductService productService;
 
     @GetMapping("/all")
-    ResponseEntity<ApiResponse> getAllProducts() {
-        List<ProductResponse> product = productService.getAllProducts();
+    ResponseEntity<ApiResponse> getAllProducts(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<ProductResponse> product = productService.getAllProducts(PageRequest.of(page - 1, size));
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 

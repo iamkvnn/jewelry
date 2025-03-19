@@ -17,7 +17,7 @@ public class Review {
     private Long rating;
     private Long createdAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
 
