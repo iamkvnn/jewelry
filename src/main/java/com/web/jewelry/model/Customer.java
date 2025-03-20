@@ -1,10 +1,8 @@
 package com.web.jewelry.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
+import com.web.jewelry.enums.EMembershiprank;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -18,6 +16,11 @@ import java.util.Set;
 @SuperBuilder
 @Entity
 public class Customer extends User {
+    @Enumerated(EnumType.STRING)
+    private EMembershiprank membershipRank;
+    private Long totalSpent;
+    private Boolean isSubscribedForNews;
+
     @JsonIgnore
     @OneToMany(mappedBy = "reviewer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews;

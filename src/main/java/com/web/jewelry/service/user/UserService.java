@@ -3,6 +3,7 @@ package com.web.jewelry.service.user;
 import com.nimbusds.jwt.JWT;
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.enums.EUserStatus;
 import com.web.jewelry.exception.AlreadyExistException;
@@ -14,21 +15,19 @@ import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
+import com.web.jewelry.service.cart.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-
+import org.springframework.security.core.Authentication;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -41,22 +40,26 @@ public class UserService implements IUserService {
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ICartService cartService;
 
+    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
         return staffRepository.findAll(pageable);
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Customer> getAllCustomers(Pageable pageable) {
         return customerRepository.findAll(pageable);
     }
-
+    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Manager> getAllManagers(Pageable pageable) {
         return null;
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public User createStaff(UserRequest request) {
         if (staffRepository.existsByEmail(request.getEmail())) {
@@ -82,8 +85,7 @@ public class UserService implements IUserService {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistException("Email already exists");
         }
-
-        return customerRepository.save(Customer.builder()
+        Customer user = customerRepository.save(Customer.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -91,13 +93,21 @@ public class UserService implements IUserService {
                 .fullName(request.getFullName())
                 .dob(request.getDob())
                 .gender(request.getGender())
+                .totalSpent(0L)
+                .membershipRank(EMembershiprank.MEMBER)
+                .isSubscribedForNews(false)
                 .status(EUserStatus.ACTIVE)
                 .role(EUserRole.CUSTOMER)
                 .joinAt(LocalDateTime.now())
                 .build()
         );
+        cartService.initializeNewCart(user);
+        return user;
     }
 
+
+    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
+    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getStaffById(Long id) {
         return staffRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
@@ -109,6 +119,8 @@ public class UserService implements IUserService {
         return customerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
+    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getManagerById(Long id) {
         return managerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));

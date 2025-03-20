@@ -1,6 +1,5 @@
 package com.web.jewelry.model;
 
-import com.web.jewelry.dto.response.ReviewResponse;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,7 +19,7 @@ public class Review {
     private Long rating;
     private LocalDateTime createdAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
 

@@ -45,6 +45,12 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
+    @PutMapping("/setDefault/{customerId}/{addressId}")
+    public ResponseEntity<ApiResponse> setDefaultAddress(@PathVariable Long customerId, @PathVariable Long addressId) {
+        addressService.setDefaultAddress(customerId, addressId);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<ApiResponse> deleteAddress(@PathVariable Long id) {
         addressService.deleteAddress(id);
