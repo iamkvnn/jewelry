@@ -25,6 +25,10 @@ public interface IUserService {
     User getCustomerById(Long id);
     User getManagerById(Long id);
 
+    User getCustomerByEmail(String username);
+    User getManagerByEmail(String username);
+    User getStaffByEmail(String username);
+
     User getCustomerByUsername(String username);
     User getManagerByUsername(String username);
     User getStaffByUsername(String username);

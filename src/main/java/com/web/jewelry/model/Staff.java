@@ -24,5 +24,5 @@ public class Staff extends User{
 
     @JsonIgnore
     @OneToMany(mappedBy = "responseBy", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<ReviewResponse> reviewResponses;
+    private Set<ReviewReply> reviewResponses;
 }

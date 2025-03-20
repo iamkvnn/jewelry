@@ -1,6 +1,7 @@
 package com.web.jewelry.model;
 
-import com.web.jewelry.dto.response.ReviewResponse;
+import com.web.jewelry.model.Review;
+import com.web.jewelry.model.Staff;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,22 +13,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
-public class Review {
+public class ReviewReply {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String content;
-    private Long rating;
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @OneToOne
+    @JoinColumn(name = "review_id")
+    private Review review;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id")
-    private Customer reviewer;
-
-    @OneToOne(mappedBy = "review")
-    private ReviewReply response;
+    @JoinColumn(name = "staff_id")
+    private Staff responseBy;
 }

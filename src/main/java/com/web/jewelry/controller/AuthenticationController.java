@@ -1,16 +1,12 @@
 package com.web.jewelry.controller;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.MACVerifier;
 import com.web.jewelry.dto.request.AuthenticationRequest;
-import com.web.jewelry.dto.request.CollectionRequest;
 import com.web.jewelry.dto.request.IntrospectRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
-import com.web.jewelry.service.Authentication.AuthenticationService;
-import jakarta.websocket.server.PathParam;
+import com.web.jewelry.service.authentication.AuthenticationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

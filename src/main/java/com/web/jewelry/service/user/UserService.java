@@ -1,5 +1,6 @@
 package com.web.jewelry.service.user;
 
+import com.nimbusds.jwt.JWT;
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.UserResponse;
 import com.web.jewelry.enums.EUserRole;
@@ -15,17 +16,22 @@ import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -36,24 +42,21 @@ public class UserService implements IUserService {
     private final ManagerRepository managerRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
         return staffRepository.findAll(pageable);
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Customer> getAllCustomers(Pageable pageable) {
         return customerRepository.findAll(pageable);
     }
-    @PreAuthorize("hasRole('MANAGER')")
+
     @Override
     public Page<Manager> getAllManagers(Pageable pageable) {
         return null;
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public User createStaff(UserRequest request) {
         if (staffRepository.existsByEmail(request.getEmail())) {
@@ -95,25 +98,38 @@ public class UserService implements IUserService {
         );
     }
 
-    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
-    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getStaffById(Long id) {
         return staffRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
     }
 
-    @PreAuthorize("hasAnyRole('MANAGER', 'CUSTOMER')")
-    @PostAuthorize("returnObject.username == authentication.name")
+//    @PostAuthorize("returnObject.email == authentication.name")
     @Override
     public User getCustomerById(Long id) {
         return customerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
-    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getManagerById(Long id) {
         return managerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+    }
+
+    @Override
+    public User getCustomerByEmail(String email) {
+        return Optional.ofNullable(customerRepository.findByEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    }
+
+    @Override
+    public User getManagerByEmail(String email) {
+        return Optional.ofNullable(managerRepository.findByEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+    }
+
+    @Override
+    public User getStaffByEmail(String email) {
+        return Optional.ofNullable(staffRepository.findByEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
     }
 
     @Override
@@ -206,7 +222,21 @@ public class UserService implements IUserService {
 
     @Override
     public User getCurrentUser() {
-        return null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        String scope = "";
+        if(authentication.getPrincipal() instanceof Jwt jwt) {
+            scope = jwt.getClaim("scope");
+        }
+        return switch (scope) {
+            case "MANGER" -> Optional.ofNullable(managerRepository.findByEmail(email))
+                    .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+            case "STAFF" -> Optional.ofNullable(staffRepository.findByEmail(email))
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+            case "CUSTOMER" -> Optional.ofNullable(customerRepository.findByEmail(email))
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            default -> throw new ResourceNotFoundException("Invalid scope");
+        };
     }
 
     @Override

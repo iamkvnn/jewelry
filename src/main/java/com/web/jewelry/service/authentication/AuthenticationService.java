@@ -6,9 +6,7 @@ import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.web.jewelry.dto.request.AuthenticationRequest;
-import com.web.jewelry.dto.request.CollectionRequest;
 import com.web.jewelry.dto.request.IntrospectRequest;
-import com.web.jewelry.dto.response.AddressResponse;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
 import com.web.jewelry.exception.ResourceNotFoundException;
@@ -17,7 +15,6 @@ import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.NonFinal;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +31,8 @@ public class AuthenticationService {
     @NonFinal
     @Value("${jwt.signerKey}")
     private String SIGNER_KEY;
+    @Value("${jwt.expireTime}")
+    private Long EXPIRATION_TIME;
 
     public AuthenticationResponse authenticate (AuthenticationRequest request, String role) {
         User user = switch (role) {
@@ -58,11 +57,11 @@ public class AuthenticationService {
     private String generateToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getUsername())
+                .subject(user.getEmail())
                 .issuer("shiny.com")
                 .issueTime(new Date())
                 .expirationTime(new Date(
-                        Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
+                        Instant.now().plus(EXPIRATION_TIME, ChronoUnit.MILLIS).toEpochMilli()
                 ))
                 .claim("scope", user.getRole())
                 .build();
@@ -78,6 +77,7 @@ public class AuthenticationService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         String token = request.getToken();
         JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
