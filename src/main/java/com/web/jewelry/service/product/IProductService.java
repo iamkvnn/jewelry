@@ -9,13 +9,13 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IProductService {
-    List<ProductResponse> getAllProducts();
+    Page<ProductResponse> getAllProducts(Pageable pageable);
     ProductResponse updateProduct(Long productId, ProductRequest request);
     ProductResponse addProduct(ProductRequest request);
     void deleteProduct(Long productId);
     Page<ProductResponse> findByTitleContaining(String title, Pageable pageable);
     Product getProductById(Long productId);
     ProductResponse convertToProductResponse(Product product);
-    List<ProductResponse> convertToProductResponses(List<Product> products);
+    Page<ProductResponse> convertToProductResponses(Page<Product> products);
     boolean existsByTitle(String title);
 }

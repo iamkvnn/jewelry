@@ -58,7 +58,6 @@ public class AttributeValueService implements IAttributeValueService {
     public List<AttributeValueResponse> convertToAttributeValueResponses(List<AttributeValue> attributeValues) {
         return attributeValues.stream().map(attributeValue -> {
             AttributeValueResponse response = new AttributeValueResponse();
-            response.setId(attributeValue.getId());
             response.setAttributeId(attributeValue.getAttribute().getId());
             response.setName(attributeValue.getAttribute().getName());
             response.setValue(attributeValue.getValue());
