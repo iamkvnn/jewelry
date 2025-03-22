@@ -29,7 +29,8 @@ import javax.crypto.spec.SecretKeySpec;
 public class SecurityConfig {
 
     private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**",
-            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/**",
+            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/create",
+            "/api/v1/payments/momo-payment",
             "/api/v1/users/customers/**", "/api/v1/users/staffs/**", "api/v1/users/add-staff"};
 
     @Value("${jwt.signerKey}")

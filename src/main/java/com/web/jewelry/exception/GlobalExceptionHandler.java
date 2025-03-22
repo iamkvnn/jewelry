@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(value = ResourceNotFoundException.class)
@@ -24,5 +27,14 @@ public class GlobalExceptionHandler {
         ApiResponse apiResponse = new ApiResponse("500", "Internal Server Error: " + ex.getMessage(), null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
     }
-
+    @ExceptionHandler(value = NoSuchAlgorithmException.class)
+    public ResponseEntity<ApiResponse> momoPaymentException(NoSuchAlgorithmException ex) {
+        ApiResponse apiResponse = new ApiResponse("500", ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiResponse);
+    }
+    @ExceptionHandler(value = InvalidKeyException.class)
+    public ResponseEntity<ApiResponse> momoPaymentException(InvalidKeyException ex) {
+        ApiResponse apiResponse = new ApiResponse("500", ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiResponse);
+    }
 }

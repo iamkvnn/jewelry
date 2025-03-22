@@ -16,11 +16,13 @@ import com.web.jewelry.service.productSize.IProductSizeService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +37,33 @@ public class ProductService implements IProductService {
     private final IProductSizeService productSizeService;
     private final IAttributeValueService attributeValueService;
     private final ModelMapper modelMapper;
+
+
+    @Override
+    public Page<ProductResponse> getFilteredProducts(List<Long> categories, String material, Long minPrice,
+                                                     Long maxPrice, List<String> sizes, String dir, Pageable pageable) {
+        Page<Product> products = productRepository.findByFilters(categories, material, minPrice, maxPrice, sizes, pageable);
+        if( dir != null && (dir.equals("asc") || dir.equals("desc"))) {
+            Comparator<Product> comparator = Comparator.comparing(
+                    p -> p.getProductSizes().stream()
+                            .map(ProductSize::getDiscountPrice)
+                            .min(Long::compareTo)
+                            .orElse(Long.MAX_VALUE)
+            );
+            if (dir.equals("desc")) {
+               comparator = comparator.reversed();
+            }
+            List<Product> sortedProducts = products.stream().sorted(comparator).collect(Collectors.toList());
+            Page<Product> response = new PageImpl<>(sortedProducts, pageable, products.getTotalElements());
+            return  convertToProductResponses(response);
+        }
+        return  convertToProductResponses(products);
+    }
+
+    @Override
+    public Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
+        return convertToProductResponses(productRepository.findAllByCategoryId(categoryId, pageable));
+    }
 
     @Override
     public Page<ProductResponse> getAllProducts(Pageable pageable) {
@@ -129,7 +158,7 @@ public class ProductService implements IProductService {
 
     @Override
     public Page<ProductResponse> findByTitleContaining(String title, Pageable pageable) {
-        return productRepository.findByTitleContaining(title, pageable);
+        return convertToProductResponses(productRepository.findByTitleContaining(title, pageable));
     }
 
     @Override
