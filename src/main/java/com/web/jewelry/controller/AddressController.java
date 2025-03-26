@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @GetMapping("/customer")
     public ResponseEntity<ApiResponse> getAddresses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Address> addresses = addressService.getCustomerAddresses(PageRequest.of(page - 1, size));
@@ -31,6 +33,7 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponses));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping("/add")
     public ResponseEntity<ApiResponse> addAddress(@RequestBody AddressRequest request) {
         Address address = addressService.addAddress(request);
@@ -38,6 +41,7 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PutMapping("/update/{id}")
     public ResponseEntity<ApiResponse> updateAddress(@PathVariable Long id, @RequestBody AddressRequest request) {
         Address address = addressService.updateAddress(id, request);

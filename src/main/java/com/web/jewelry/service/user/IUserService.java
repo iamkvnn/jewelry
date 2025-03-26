@@ -8,7 +8,6 @@ import com.web.jewelry.model.Staff;
 import com.web.jewelry.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.parameters.P;
 
 public interface IUserService {
     Page<Staff> getAllStaff(Pageable pageable);

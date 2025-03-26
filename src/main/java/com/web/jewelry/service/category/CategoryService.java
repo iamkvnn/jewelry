@@ -19,6 +19,11 @@ public class CategoryService implements ICategoryService{
     private final ModelMapper modelMapper;
 
     @Override
+    public List<Category> getCategoriesByParentId(Long parentId) {
+        return categoryRepository.findAllByParentId(parentId);
+    }
+
+    @Override
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Category not found"));
     }

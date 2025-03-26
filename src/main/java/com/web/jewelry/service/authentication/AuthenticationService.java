@@ -9,6 +9,7 @@ import com.web.jewelry.dto.request.AuthenticationRequest;
 import com.web.jewelry.dto.request.IntrospectRequest;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
+import com.web.jewelry.dto.response.UserResponse;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.user.IUserService;
@@ -45,7 +46,9 @@ public class AuthenticationService {
             boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
             if(authenticated){
                 String token = generateToken(user);
+                UserResponse userResponse = userService.convertToUserResponse(user);
                 return AuthenticationResponse.builder()
+                        .user(userResponse)
                         .token(token)
                         .authenticated(true)
                         .build();

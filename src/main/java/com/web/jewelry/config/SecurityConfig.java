@@ -1,8 +1,11 @@
 package com.web.jewelry.config;
 
+import com.web.jewelry.enums.EUserRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,20 +19,25 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
+
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**", "/api/v1/products/add",
-                    "/api/v1/users/**"};
+    private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**",
+            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/create",
+            "/api/v1/payments/momo-payment",
+            "/api/v1/users/customers/**", "/api/v1/users/staffs/**", "api/v1/users/add-staff"};
 
     @Value("${jwt.signerKey}")
     private String signerKey;
@@ -43,9 +51,23 @@ public class SecurityConfig {
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(new JWTAuthenticationEntryPoint()));
         httpSecurity.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
         return httpSecurity.build();
+    }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean
@@ -68,17 +90,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(10);
-    }
-
-    @Bean
-    public CorsFilter corsFilter () {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("*");
-        configuration.addAllowedMethod("*");
-        configuration.addAllowedHeader("*");
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return new CorsFilter(source);
     }
 }
