@@ -29,26 +29,22 @@ public class NotificationService implements INotificationService {
     @Override
     public void sendNotificationToSpecificCustomer(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
-        request.getCustomerIds().forEach(customerId -> {
-            userNotificationRepository.save(UserNotification.builder()
-                    .customer((Customer) userService.getCustomerById(customerId))
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build());
-        });
+        request.getCustomerIds().forEach(customerId -> userNotificationRepository.save(UserNotification.builder()
+                .customer((Customer) userService.getCustomerById(customerId))
+                .notification(notification)
+                .status(ENotificationStatus.UNREAD)
+                .build()));
     }
 
     @Transactional
     @Override
     public void sendNotificationToAllCustomer(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
-        userService.getAllCustomers(Pageable.unpaged()).forEach(customer -> {
-            userNotificationRepository.save(UserNotification.builder()
-                    .customer(customer)
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build());
-        });
+        userService.getAllCustomers(Pageable.unpaged()).forEach(customer -> userNotificationRepository.save(UserNotification.builder()
+                .customer(customer)
+                .notification(notification)
+                .status(ENotificationStatus.UNREAD)
+                .build()));
     }
 
     @Transactional
@@ -69,13 +65,11 @@ public class NotificationService implements INotificationService {
     @Override
     public void sendNotificationToAllStaff(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
-        userService.getAllStaff(Pageable.unpaged()).forEach(staff -> {
-            userNotificationRepository.save(UserNotification.builder()
-                    .staff(staff)
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build());
-        });
+        userService.getAllStaff(Pageable.unpaged()).forEach(staff -> userNotificationRepository.save(UserNotification.builder()
+                .staff(staff)
+                .notification(notification)
+                .status(ENotificationStatus.UNREAD)
+                .build()));
     }
 
     @Transactional
@@ -96,13 +90,11 @@ public class NotificationService implements INotificationService {
     @Override
     public void sendNotificationToAllManager(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
-        userService.getAllManagers(Pageable.unpaged()).forEach(manager -> {
-            userNotificationRepository.save(UserNotification.builder()
-                    .manager(manager)
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build());
-        });
+        userService.getAllManagers(Pageable.unpaged()).forEach(manager -> userNotificationRepository.save(UserNotification.builder()
+                .manager(manager)
+                .notification(notification)
+                .status(ENotificationStatus.UNREAD)
+                .build()));
     }
 
     private Notification createBaseNotification(NotificationRequest request) {

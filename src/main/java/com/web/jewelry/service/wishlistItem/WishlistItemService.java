@@ -1,4 +1,4 @@
-package com.web.jewelry.service.WishlistItem;
+package com.web.jewelry.service.wishlistItem;
 
 import com.web.jewelry.dto.request.WishlistItemRequest;
 import com.web.jewelry.dto.response.WishlistItemResponse;
@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -31,59 +30,29 @@ public class WishlistItemService implements IWishlistItemService{
     private final ModelMapper modelMapper;
 
     @Override
-    public WishlistItem updateWishlistItem(Long id, WishlistItemRequest wishlistItemRequest) {
-        return wishlistItemRepository.findById(id).map(
-                wishlistItem -> {
-                    Product product = productService.getProductById(wishlistItemRequest.getProduct().getId());
-                    wishlistItem.setProduct(product);
-                    return wishlistItemRepository.save(wishlistItem);
-                }).orElseThrow(() -> new ResourceNotFoundException("WishlistItem not found"));
-    }
-
-    @Override
-    public WishlistItem addWishlistItem(Long userId, WishlistItemRequest wishlistItemRequest) {
-        Customer customer = (Customer) userService.getCustomerById(userId);
-        if (customer != null) {
-            if(wishlistItemRepository.findByCustomerIdAndProductId(userId, wishlistItemRequest.getProduct().getId()).isPresent()) {
-                throw new RuntimeException("WishlistItem already exists");
-            }
-            else{
-                Product product =  productService.getProductById(wishlistItemRequest.getProduct().getId());
-                return wishlistItemRepository.save(WishlistItem.builder()
-                        .customer(customer)
-                        .product(product)
-                        .addedAt(LocalDateTime.now())
-                        .build());
-            }
+    public WishlistItem addWishlistItem(WishlistItemRequest wishlistItemRequest) {
+        Customer customer = (Customer) userService.getCurrentUser();
+        if(wishlistItemRepository.findByCustomerIdAndProductId(customer.getId(), wishlistItemRequest.getProduct().getId()).isPresent()) {
+            throw new RuntimeException("WishlistItem already exists");
         }
-        else {
-            throw new BadRequestException("Customer not found");
-        }
+        Product product = productService.getProductById(wishlistItemRequest.getProduct().getId());
+        return wishlistItemRepository.save(WishlistItem.builder()
+                .customer(customer)
+                .product(product)
+                .addedAt(LocalDateTime.now())
+                .build());
     }
 
     @Override
     public void deleteWishlistItem(Long id) {
-        wishlistItemRepository.deleteById(id);
+        Long customerId = userService.getCurrentUser().getId();
+        wishlistItemRepository.deleteByIdAndCustomerId(id, customerId);
     }
 
     @Override
     public Page<WishlistItem> getCustomerWishlistItems(Pageable pageable) {
-        // lấy id user trong token
-        var context = SecurityContextHolder.getContext();
-        String username = context.getAuthentication().getName();
-        User customer = userService.getCustomerByUsername(username);
-
-        if(customer != null) {
-            System.out.println("DEBUG: " + customer.getId().toString());
-            return wishlistItemRepository.findAllByCustomerId(customer.getId(), pageable);
-        }
-        throw new BadRequestException("Customer not found");
-    }
-
-    @Override
-    public WishlistItem getWishlistItemById(Long id) {
-        return wishlistItemRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("WishlistItem not found"));
+        User customer = userService.getCurrentUser();
+        return wishlistItemRepository.findAllByCustomerId(customer.getId(), pageable);
     }
 
     @Override

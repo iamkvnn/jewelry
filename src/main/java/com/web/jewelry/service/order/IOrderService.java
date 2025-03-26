@@ -9,11 +9,10 @@ import com.web.jewelry.model.Order;
 import org.springframework.data.domain.Page;
 
 public interface IOrderService {
-    Order placeOrder(Long customerId, OrderRequest orderRequest);
+    Order placeOrder(OrderRequest orderRequest);
     Page<Order> getOrders(Long page, Long size);
     Order getOrder(Long orderId);
-    Page<Order> getCustomerOrders(Long customerId, Long page, Long size);
-    Page<Order> getMyOrders();
+    Page<Order> getMyOrders(Long page, Long size);
     Order updateOrderStatus(Long orderId, EOrderStatus status);
     Long getEstimateShippingFee(String district, String province, EShippingMethod method);
     OrderResponse convertToResponse(Order order);

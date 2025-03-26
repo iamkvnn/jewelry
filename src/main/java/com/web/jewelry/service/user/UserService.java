@@ -6,6 +6,7 @@ import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.enums.EUserStatus;
 import com.web.jewelry.exception.AlreadyExistException;
+import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.Manager;
@@ -14,20 +15,17 @@ import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
-import com.web.jewelry.service.cart.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PostAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 @Service
@@ -37,26 +35,22 @@ public class UserService implements IUserService {
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ICartService cartService;
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
         return staffRepository.findAll(pageable);
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public Page<Customer> getAllCustomers(Pageable pageable) {
         return customerRepository.findAll(pageable);
     }
-    @PreAuthorize("hasRole('MANAGER')")
+
     @Override
     public Page<Manager> getAllManagers(Pageable pageable) {
-        return null;
+        return managerRepository.findAll(pageable);
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
     @Override
     public User createStaff(UserRequest request) {
         if (staffRepository.existsByEmail(request.getEmail())) {
@@ -82,7 +76,7 @@ public class UserService implements IUserService {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistException("Email already exists");
         }
-        Customer user = customerRepository.save(Customer.builder()
+        return customerRepository.save(Customer.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -98,44 +92,36 @@ public class UserService implements IUserService {
                 .joinAt(LocalDateTime.now())
                 .build()
         );
-        cartService.initializeNewCart(user);
-        return user;
     }
 
-    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
-    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getStaffById(Long id) {
         return staffRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
     }
 
-    @PreAuthorize("hasAnyRole('MANAGER', 'CUSTOMER')")
-    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getCustomerById(Long id) {
         return customerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
-    @PreAuthorize("hasRole('MANAGER')")
-    @PostAuthorize("returnObject.username == authentication.name")
     @Override
     public User getManagerById(Long id) {
         return managerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
     }
 
     @Override
-    public User getCustomerByUsername(String username) {
-        return customerRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    public User getCustomerByEmail(String email) {
+        return customerRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
 
     @Override
-    public User getManagerByUsername(String username) {
-        return managerRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+    public User getManagerByEmail(String email) {
+        return managerRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
     }
 
     @Override
-    public User getStaffByUsername(String username) {
-        return staffRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+    public User getStaffByEmail(String email) {
+        return staffRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
     }
 
     @Override
@@ -152,37 +138,12 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User updateCustomer(UserRequest request, Long id) {
-        return customerRepository.findById(id)
-                .map(customer -> {
-                    customer.setPhone(request.getPhone());
-                    customer.setFullName(request.getFullName());
-                    customer.setDob(request.getDob());
-                    customer.setGender(request.getGender());
-                    return customerRepository.save(customer);
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-    }
-
-    @Override
-    public User updateManager(UserRequest request, Long id) {
-        return managerRepository.findById(id)
-                .map(manager -> {
-                    manager.setPhone(request.getPhone());
-                    manager.setFullName(request.getFullName());
-                    manager.setDob(request.getDob());
-                    manager.setGender(request.getGender());
-                    return managerRepository.save(manager);
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
-    }
-
-    @Override
     public void deleteStaff(Long id) {
         staffRepository.findById(id).ifPresentOrElse(staffRepository::delete, () -> {
             throw new ResourceNotFoundException("Staff not found");
         });
     }
+
     @Override
     public void deactivateStaff(Long id){
         Staff staff = staffRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
@@ -215,18 +176,37 @@ public class UserService implements IUserService {
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return Optional.ofNullable(customerRepository.findByEmail(email))
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        String scope = authentication.getAuthorities().stream().findFirst().orElseThrow(() -> new BadRequestException("Invalid scope")).getAuthority();
+        return switch (scope) {
+            case "ROLE_MANAGER" -> getManagerByEmail(email);
+            case "ROLE_STAFF" -> getStaffByEmail(email);
+            case "ROLE_CUSTOMER" -> getCustomerByEmail(email);
+            default -> throw new BadRequestException("Invalid user role");
+        };
     }
 
     @Override
     public User updateCurrentUser(UserRequest request) {
-        return null;
+        User user = getCurrentUser();
+        user.setPhone(request.getPhone());
+        user.setFullName(request.getFullName());
+        user.setDob(request.getDob());
+        user.setGender(request.getGender());
+        return switch (user.getRole()) {
+            case MANAGER -> managerRepository.save((Manager) user);
+            case STAFF -> staffRepository.save((Staff) user);
+            case CUSTOMER -> customerRepository.save((Customer) user);
+        };
     }
 
     @Override
-    public User deleteCurrentUser() {
-        return null;
+    public void deleteCurrentCustomer() {
+        User user = getCurrentUser();
+        if (Objects.requireNonNull(user.getRole()) == EUserRole.CUSTOMER) {
+            customerRepository.delete((Customer) user);
+        } else {
+            throw new BadRequestException("Invalid user role");
+        }
     }
 
     @Override
