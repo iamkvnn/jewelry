@@ -10,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PostAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -41,9 +39,9 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
-    @PostMapping("/add-customer")
-    public ResponseEntity<ApiResponse> addUser(@RequestBody UserRequest request) {
-        User user = userService.createCustomer(request);
+    @GetMapping("my-info")
+    public ResponseEntity<ApiResponse> getCurrentUser() {
+        User user = userService.getCurrentUser();
         UserResponse response = userService.convertToUserResponse(user);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
@@ -55,9 +53,9 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
-    @PutMapping("/update-customer/{id}")
-    public ResponseEntity<ApiResponse> updateCustomer(@PathVariable Long id, @RequestBody UserRequest request) {
-        User user = userService.updateCustomer(request, id);
+    @PutMapping("/update")
+    public ResponseEntity<ApiResponse> updateCustomer(@RequestBody UserRequest request) {
+        User user = userService.updateCurrentUser(request);
         UserResponse response = userService.convertToUserResponse(user);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
@@ -67,6 +65,12 @@ public class UserController {
         User user = userService.updateStaff(request, id);
         UserResponse response = userService.convertToUserResponse(user);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
+
+    @DeleteMapping("/customer/delete-my-account")
+    public ResponseEntity<ApiResponse> deleteCurrentCustomer() {
+        userService.deleteCurrentCustomer();
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
     @DeleteMapping("/delete-staff/{id}")

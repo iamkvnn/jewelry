@@ -1,4 +1,4 @@
-package com.web.jewelry.service.Authentication;
+package com.web.jewelry.service.authentication;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
@@ -36,9 +36,9 @@ public class AuthenticationService {
 
     public AuthenticationResponse authenticate (AuthenticationRequest request, String role) {
         User user = switch (role) {
-            case "manager" -> userService.getManagerByUsername(request.getUsername());
-            case "staff" -> userService.getStaffByUsername(request.getUsername());
-            case "customer" -> userService.getCustomerByUsername(request.getUsername());
+            case "manager" -> userService.getManagerByEmail(request.getEmail());
+            case "staff" -> userService.getStaffByEmail(request.getEmail());
+            case "customer" -> userService.getCustomerByEmail(request.getEmail());
             default -> null;
         };
         if (user != null) {

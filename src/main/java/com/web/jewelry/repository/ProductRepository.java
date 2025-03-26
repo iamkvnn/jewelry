@@ -10,6 +10,6 @@ import com.web.jewelry.model.Product;
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    Page<ProductResponse> findByTitleContaining(String title, Pageable pageable);
+    Page<Product> findByTitleContaining(String title, Pageable pageable);
     boolean existsByTitle(String title);
 }

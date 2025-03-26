@@ -4,8 +4,7 @@ import com.web.jewelry.dto.request.WishlistItemRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.WishlistItemResponse;
 import com.web.jewelry.model.WishlistItem;
-import com.web.jewelry.service.WishlistItem.IWishlistItemService;
-import jakarta.websocket.server.PathParam;
+import com.web.jewelry.service.wishlistItem.IWishlistItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,12 +17,6 @@ import org.springframework.web.bind.annotation.*;
 public class WishlistItemController {
     private final IWishlistItemService wishlistItemService;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse> getWishlistItemById(@PathVariable Long id) {
-        WishlistItem wishlistItem = wishlistItemService.getWishlistItemById(id);
-        WishlistItemResponse wishlistItemResponse = wishlistItemService.convertToResponse(wishlistItem);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", wishlistItemResponse));
-    }
 
     @GetMapping("/customer")
     public ResponseEntity<ApiResponse> getWishlist(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
@@ -39,15 +32,8 @@ public class WishlistItemController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<ApiResponse> addWishlistItem(@RequestParam Long customerId, @RequestBody WishlistItemRequest wishlistItemRequest) {
-        WishlistItem wishlistItem = wishlistItemService.addWishlistItem(customerId, wishlistItemRequest);
-        WishlistItemResponse wishlistItemResponse = wishlistItemService.convertToResponse(wishlistItem);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", wishlistItemResponse));
-    }
-
-    @PutMapping("/update/{id}")
-    public ResponseEntity<ApiResponse> updateWishlistItem(@PathVariable Long id, @RequestBody WishlistItemRequest wishlistItemRequest) {
-        WishlistItem wishlistItem = wishlistItemService.updateWishlistItem(id, wishlistItemRequest);
+    public ResponseEntity<ApiResponse> addWishlistItem(@RequestBody WishlistItemRequest wishlistItemRequest) {
+        WishlistItem wishlistItem = wishlistItemService.addWishlistItem(wishlistItemRequest);
         WishlistItemResponse wishlistItemResponse = wishlistItemService.convertToResponse(wishlistItem);
         return ResponseEntity.ok(new ApiResponse("200", "Success", wishlistItemResponse));
     }

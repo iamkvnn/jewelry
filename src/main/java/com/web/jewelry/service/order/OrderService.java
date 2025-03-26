@@ -14,6 +14,7 @@ import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.productSize.IProductSizeService;
+import com.web.jewelry.service.user.IUserService;
 import com.web.jewelry.service.voucher.IVoucherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -39,6 +41,7 @@ public class OrderService implements IOrderService {
     private final IProductSizeService productSizeService;
     private final IAddressService addressService;
     private final ICartService cartService;
+    private final IUserService userService;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
 
@@ -51,8 +54,8 @@ public class OrderService implements IOrderService {
 
     @Transactional
     @Override
-    public Order placeOrder(Long customerId, OrderRequest orderRequest) {
-        Cart cart = cartService.getCartByCustomerId(customerId);
+    public Order placeOrder(OrderRequest orderRequest) {
+        Cart cart = cartService.getMyCart();
         Address address = addressService.getAddressById(orderRequest.getShippingAddress().getId());
         Order order = initializeOrder(orderRequest, cart, address);
         List<OrderItem> orderItems = createOrderItems(order, cart, orderRequest);
@@ -141,7 +144,7 @@ public class OrderService implements IOrderService {
                 })
                 .toList();
         productSizeService.updateStockAndSold(productSizes);
-        cartService.removeItemsFromCart(cart.getId(), productSizeIds);
+        cartService.removeItemsFromCart(productSizeIds);
         return items;
     }
 
@@ -150,21 +153,19 @@ public class OrderService implements IOrderService {
         return orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
+    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
     public Order getOrder(Long orderId) {
         return orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
     @Override
-    public Page<Order> getCustomerOrders(Long customerId, Long page, Long size) {
+    public Page<Order> getMyOrders(Long page, Long size) {
+        Long customerId = userService.getCurrentUser().getId();
         return orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
-    @Override
-    public Page<Order> getMyOrders() {
-        return null;
-    }
-
+    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
     public Order updateOrderStatus(Long orderId, EOrderStatus status) {
         Order order = getOrder(orderId);

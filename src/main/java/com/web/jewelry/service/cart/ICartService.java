@@ -8,18 +8,15 @@ import com.web.jewelry.model.Customer;
 import java.util.List;
 
 public interface ICartService {
-    Cart getCart(Long id);
     Cart getMyCart();
-    void clearCart(Long id);
     void clearMyCart();
     void initializeNewCart(Customer customer);
-    Cart getCartByCustomerId(Long id);
-    public void addItemToCart(Long cartId, Long productSizeId, Long quantity);
-    void removeItemFromCart(Long cartId, Long productSizeId);
-    void removeItemsFromCart(Long cartId, List<Long> productSizeIds);
-    void updateItemQuantity(Long cartId, Long productSizeId, Long quantity);
-    void changeSize(Long cartId, Long oldProductSize, Long newProductSize);
+    public void addItemToCart(Long productSizeId, Long quantity);
+    void removeItemFromCart(Long productSizeId);
+    void removeItemsFromCart(List<Long> productSizeIds);
+    void updateItemQuantity(Long productSizeId, Long quantity);
+    void changeSize(Long oldProductSize, Long newProductSize);
     CartItem getCartItem(Long cartId, Long productSizeId);
-    CartItem getCartItemById(Long cartId, Long cartItemId);
+    CartItem getCartItemById(Long cartItemId);
     CartResponse convertToCartResponse(Cart cart);
 }

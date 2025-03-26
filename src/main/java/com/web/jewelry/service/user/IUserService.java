@@ -8,6 +8,7 @@ import com.web.jewelry.model.Staff;
 import com.web.jewelry.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.parameters.P;
 
 public interface IUserService {
     Page<Staff> getAllStaff(Pageable pageable);
@@ -17,17 +18,15 @@ public interface IUserService {
     User createCustomer(UserRequest request);
     User createStaff(UserRequest request);
 
-    User updateCustomer(UserRequest request, Long id);
     User updateStaff(UserRequest request, Long id);
-    User updateManager(UserRequest request, Long id);
 
+    User getManagerById(Long id);
     User getStaffById(Long id);
     User getCustomerById(Long id);
-    User getManagerById(Long id);
 
-    User getCustomerByUsername(String username);
-    User getManagerByUsername(String username);
-    User getStaffByUsername(String username);
+    User getCustomerByEmail(String username);
+    User getManagerByEmail(String username);
+    User getStaffByEmail(String username);
 
     void deactivateStaff(Long id);
     void activateStaff(Long id);
@@ -38,9 +37,8 @@ public interface IUserService {
 
     User getCurrentUser();
     User updateCurrentUser(UserRequest request);
-    User deleteCurrentUser();
+    void deleteCurrentCustomer();
 
     <T> UserResponse convertToUserResponse(T user);
     <T> Page<UserResponse> convertToUserResponse(Page<T> users);
-
 }

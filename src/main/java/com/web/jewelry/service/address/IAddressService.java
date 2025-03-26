@@ -7,12 +7,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface IAddressService {
-    Address addAddress(Long userId, AddressRequest request);
+    Address addAddress(AddressRequest request);
     Address updateAddress(Long id, AddressRequest request);
     Address getAddressById(Long id);
-    Address getCustomerDefaultAddress(Long customerId);
-    Page<Address> getCustomerAddresses(Long customerId, Pageable pageable);
-    void setDefaultAddress(Long customerId, Long addressId);
+    Address getCustomerDefaultAddress();
+    Page<Address> getCustomerAddresses(Pageable pageable);
+    void setDefaultAddress(Long addressId);
     void deleteAddress(Long id);
     AddressResponse convertToResponse(Address address);
     Page<AddressResponse> convertToResponse(Page<Address> addresses);

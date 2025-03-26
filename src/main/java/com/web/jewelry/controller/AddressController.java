@@ -24,16 +24,16 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
-    @GetMapping("/customer/{customerId}")
-    public ResponseEntity<ApiResponse> getAddresses(@PathVariable Long customerId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<Address> addresses = addressService.getCustomerAddresses(customerId, PageRequest.of(page - 1, size));
+    @GetMapping("/customer")
+    public ResponseEntity<ApiResponse> getAddresses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+        Page<Address> addresses = addressService.getCustomerAddresses(PageRequest.of(page - 1, size));
         Page<AddressResponse> addressResponses = addressService.convertToResponse(addresses);
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponses));
     }
 
     @PostMapping("/add")
-    public ResponseEntity<ApiResponse> addAddress(@RequestParam Long customerId, @RequestBody AddressRequest request) {
-        Address address = addressService.addAddress(customerId, request);
+    public ResponseEntity<ApiResponse> addAddress(@RequestBody AddressRequest request) {
+        Address address = addressService.addAddress(request);
         AddressResponse addressResponse = addressService.convertToResponse(address);
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
@@ -45,9 +45,9 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
-    @PutMapping("/setDefault/{customerId}/{addressId}")
-    public ResponseEntity<ApiResponse> setDefaultAddress(@PathVariable Long customerId, @PathVariable Long addressId) {
-        addressService.setDefaultAddress(customerId, addressId);
+    @PutMapping("/setDefault/{addressId}")
+    public ResponseEntity<ApiResponse> setDefaultAddress(@PathVariable Long addressId) {
+        addressService.setDefaultAddress(addressId);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 

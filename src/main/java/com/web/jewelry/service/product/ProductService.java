@@ -129,7 +129,7 @@ public class ProductService implements IProductService {
 
     @Override
     public Page<ProductResponse> findByTitleContaining(String title, Pageable pageable) {
-        return productRepository.findByTitleContaining(title, pageable);
+        return convertToProductResponses(productRepository.findByTitleContaining(title, pageable));
     }
 
     @Override

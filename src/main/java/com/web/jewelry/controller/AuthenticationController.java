@@ -1,16 +1,18 @@
 package com.web.jewelry.controller;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.MACVerifier;
 import com.web.jewelry.dto.request.AuthenticationRequest;
-import com.web.jewelry.dto.request.CollectionRequest;
 import com.web.jewelry.dto.request.IntrospectRequest;
+import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
-import com.web.jewelry.service.Authentication.AuthenticationService;
-import jakarta.websocket.server.PathParam;
+import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.model.Customer;
+import com.web.jewelry.model.User;
+import com.web.jewelry.service.authentication.AuthenticationService;
+import com.web.jewelry.service.cart.ICartService;
+import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,16 @@ import java.text.ParseException;
 @RestController
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
+    private final IUserService userService;
+    private final ICartService cartService;
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse> addUser(@RequestBody UserRequest request) {
+        User user = userService.createCustomer(request);
+        cartService.initializeNewCart((Customer) user);
+        UserResponse response = userService.convertToUserResponse(user);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
 
     @PostMapping("/token")
     public ResponseEntity<ApiResponse> authenticate(@RequestBody AuthenticationRequest request, @RequestParam String role) {
