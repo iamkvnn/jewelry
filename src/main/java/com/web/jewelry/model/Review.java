@@ -3,6 +3,8 @@ package com.web.jewelry.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,7 +17,7 @@ public class Review {
     private Long id;
     private String content;
     private Long rating;
-    private Long createdAt;
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
@@ -26,5 +28,5 @@ public class Review {
     private Customer reviewer;
 
     @OneToOne(mappedBy = "review")
-    private ReviewResponse response;
+    private ReviewReply response;
 }

@@ -11,6 +11,7 @@ import com.web.jewelry.repository.CartRepository;
 import com.web.jewelry.service.observer.ProductSizeListener;
 import com.web.jewelry.service.observer.ProductSizeObservable;
 import com.web.jewelry.service.productSize.IProductSizeService;
+import com.web.jewelry.service.user.IUserService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.List;
 @Service
 public class CartService implements ICartService, ProductSizeListener {
     private final IProductSizeService productSizeService;
+    private final IUserService userService;
     private final ProductSizeObservable productSizeObservable;
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
@@ -36,27 +38,18 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public Cart getCart(Long id) {
-        return cartRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
-    }
-
-    @Override
     public Cart getMyCart() {
-        return null;
+        Long customerId = userService.getCurrentUser().getId();
+        return cartRepository.findByCustomerId(customerId).orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
     }
 
     @Transactional
     @Override
-    public void clearCart(Long id) {
-        Cart cart = getCart(id);
+    public void clearMyCart() {
+        Cart cart = getMyCart();
         cart.setTotalPrice(0L);
         cart.getCartItems().clear();
         cartRepository.save(cart);
-    }
-
-    @Override
-    public void clearMyCart() {
-
     }
 
     @Override
@@ -68,16 +61,11 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public Cart getCartByCustomerId(Long id) {
-        return cartRepository.findByCustomerId(id).orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
-    }
-
-    @Override
-    public void addItemToCart(Long cartId, Long productSizeId, Long quantity) {
+    public void addItemToCart(Long productSizeId, Long quantity) {
         if (quantity <= 0) {
             throw new BadRequestException("Quantity must be greater than 0");
         }
-        Cart cart = getCart(cartId);
+        Cart cart = getMyCart();
         ProductSize size = productSizeService.getProductSize(productSizeId);
         if (!size.getProduct().getStatus().equals(EProductStatus.IN_STOCK) || size.isDeleted()) {
             throw new ResourceNotFoundException("Product not found or out of stock");
@@ -85,7 +73,7 @@ public class CartService implements ICartService, ProductSizeListener {
         if (size.getStock() < quantity) {
             throw new ResourceNotFoundException("Not enough inventory");
         }
-        CartItem CItem = cartItemRepository.findByCartIdAndProductSizeId(cartId, productSizeId)
+        CartItem CItem = cartItemRepository.findByCartIdAndProductSizeId(cart.getId(), productSizeId)
                 .map(cartItem -> {
                     cartItem.setQuantity(cartItem.getQuantity() + quantity);
                     return cartItem;
@@ -102,22 +90,26 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public void removeItemFromCart(Long cartId, Long productSizeId) {
-        Cart cart = getCart(cartId);
-        CartItem cartItem = getCartItem(cartId, productSizeId);
+    public void removeItemFromCart(Long productSizeId) {
+        Cart cart = getMyCart();
+        CartItem cartItem = getCartItem(cart.getId(), productSizeId);
         cart.removeFromCart(cartItem);
         cartRepository.save(cart);
     }
 
     @Override
-    public void removeItemsFromCart(Long cartId, List<Long> productSizeIds) {
+    public void removeItemsFromCart(List<Long> productSizeIds) {
+        Long cartId = getMyCart().getId();
         cartItemRepository.deleteAllByCartIdAndProductSizeIdIn(cartId, productSizeIds);
     }
 
     @Override
-    public void updateItemQuantity(Long cartId, Long productSizeId, Long quantity) {
-        Cart cart = getCart(cartId);
-        CartItem cartItem = getCartItem(cartId, productSizeId);
+    public void updateItemQuantity(Long productSizeId, Long quantity) {
+        if (quantity <= 0) {
+            throw new BadRequestException("Quantity must be greater than 0");
+        }
+        Cart cart = getMyCart();
+        CartItem cartItem = getCartItem(cart.getId(), productSizeId);
         ProductSize size = cartItem.getProductSize();
         if (size.getStock() < quantity) {
             throw new ResourceNotFoundException("Not enough inventory");
@@ -127,9 +119,9 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public void changeSize(Long cartId, Long oldProductSizeId, Long newProductSizeId) {
-        Cart cart = getCart(cartId);
-        CartItem oldCartItem = getCartItem(cartId, oldProductSizeId);
+    public void changeSize(Long oldProductSizeId, Long newProductSizeId) {
+        Cart cart = getMyCart();
+        CartItem oldCartItem = getCartItem(cart.getId(), oldProductSizeId);
         ProductSize size = productSizeService.getProductSize(newProductSizeId);
         if (oldProductSizeId.equals(newProductSizeId)) {
             throw new AlreadyExistException("Product size is already in your cart");
@@ -143,7 +135,7 @@ public class CartService implements ICartService, ProductSizeListener {
         if (size.getStock() < 1) {
             throw new ResourceNotFoundException("Not enough inventory");
         }
-        CartItem newCartItem = cartItemRepository.findByCartIdAndProductSizeId(cartId, newProductSizeId)
+        CartItem newCartItem = cartItemRepository.findByCartIdAndProductSizeId(cart.getId(), newProductSizeId)
                 .map(cartItem -> {
                     cartItem.setQuantity(cartItem.getQuantity() + 1);
                     return cartItem;
@@ -166,7 +158,8 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public CartItem getCartItemById(Long cartId, Long cartItemId) {
+    public CartItem getCartItemById(Long cartItemId) {
+        Long cartId = getMyCart().getId();
         return cartItemRepository.findByIdAndCartId(cartItemId, cartId).orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
     }
 

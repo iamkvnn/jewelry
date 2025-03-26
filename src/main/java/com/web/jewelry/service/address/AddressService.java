@@ -6,6 +6,7 @@ import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Address;
 import com.web.jewelry.model.Customer;
+import com.web.jewelry.model.User;
 import com.web.jewelry.repository.AddressRepository;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,9 +27,9 @@ public class AddressService implements IAddressService{
     private final ModelMapper modelMapper;
 
     @Override
-    public Address addAddress(Long customerId, AddressRequest request) {
-        Customer customer = (Customer) userService.getCustomerById(customerId);
-        boolean isDefault = !addressRepository.existsByCustomerId(customerId);
+    public Address addAddress(AddressRequest request) {
+        Customer customer = (Customer) userService.getCurrentUser();
+        boolean isDefault = !addressRepository.existsByCustomerId(customer.getId());
         return addressRepository.save(Address.builder()
                 .customer(customer)
                 .recipientName(request.getRecipientName())
@@ -41,7 +44,8 @@ public class AddressService implements IAddressService{
 
     @Override
     public Address updateAddress(Long id, AddressRequest request) {
-        return addressRepository.findById(id).map(address -> {
+        Long customerId = userService.getCurrentUser().getId();
+        return addressRepository.findByIdAndCustomerId(id, customerId).map(address -> {
             address.setRecipientName(request.getRecipientName());
             address.setRecipientPhone(request.getRecipientPhone());
             address.setProvince(request.getProvince());
@@ -52,32 +56,40 @@ public class AddressService implements IAddressService{
         }).orElseThrow(() -> new RuntimeException("Address not found"));
     }
 
+    @Transactional
     @Override
-    public void setDefaultAddress(Long customerId, Long addressId){
+    public void setDefaultAddress(Long addressId){
+        Long customerId = userService.getCurrentUser().getId();
         addressRepository.findAllByCustomerId(customerId, Pageable.unpaged()).forEach(address -> {
+            if (!address.getCustomer().getId().equals(customerId))
+                throw new BadRequestException("Address not found");
             address.setDefault(address.getId().equals(addressId));
             addressRepository.save(address);
         });
     }
 
+    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
     public Address getAddressById(Long id) {
         return addressRepository.findById(id).orElseThrow(() -> new RuntimeException("Address not found"));
     }
 
     @Override
-    public Page<Address> getCustomerAddresses(Long customerId, Pageable pageable) {
+    public Page<Address> getCustomerAddresses(Pageable pageable) {
+        Long customerId = userService.getCurrentUser().getId();
         return addressRepository.findAllByCustomerId(customerId, pageable);
     }
 
     @Override
-    public Address getCustomerDefaultAddress(Long customerId) {
+    public Address getCustomerDefaultAddress() {
+        Long customerId = userService.getCurrentUser().getId();
         return addressRepository.findByCustomerIdAndIsDefault(customerId, true).orElseThrow(() -> new ResourceNotFoundException("Default address not found"));
     }
 
     @Override
     public void deleteAddress(Long id) {
-        addressRepository.findById(id).ifPresentOrElse(address -> {
+        Long customerId = userService.getCurrentUser().getId();
+        addressRepository.findByIdAndCustomerId(id, customerId).ifPresentOrElse(address -> {
             if (address.isDefault()) {
                 throw new BadRequestException("Cannot delete default address");
             }
