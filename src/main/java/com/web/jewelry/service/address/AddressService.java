@@ -6,8 +6,10 @@ import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Address;
 import com.web.jewelry.model.Customer;
+import com.web.jewelry.model.User;
 import com.web.jewelry.repository.AddressRepository;
 import com.web.jewelry.service.user.IUserService;
+import com.web.jewelry.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -24,19 +26,23 @@ public class AddressService implements IAddressService{
     private final ModelMapper modelMapper;
 
     @Override
-    public Address addAddress(Long customerId, AddressRequest request) {
-        Customer customer = (Customer) userService.getCustomerById(customerId);
-        boolean isDefault = !addressRepository.existsByCustomerId(customerId);
-        return addressRepository.save(Address.builder()
-                .customer(customer)
-                .recipientName(request.getRecipientName())
-                .recipientPhone(request.getRecipientPhone())
-                .province(request.getProvince())
-                .district(request.getDistrict())
-                .village(request.getVillage())
-                .address(request.getAddress())
-                .isDefault(isDefault)
-                .build());
+    public Address addAddress(AddressRequest request) {
+        User user = userService.getCurrentUser();
+        if(user != null) {
+            Customer customer = (Customer) user;
+            boolean isDefault = !addressRepository.existsByCustomerId(user.getId());
+            return addressRepository.save(Address.builder()
+                    .customer(customer)
+                    .recipientName(request.getRecipientName())
+                    .recipientPhone(request.getRecipientPhone())
+                    .province(request.getProvince())
+                    .district(request.getDistrict())
+                    .village(request.getVillage())
+                    .address(request.getAddress())
+                    .isDefault(isDefault)
+                    .build());
+        }
+        throw new BadRequestException("User not found");
     }
 
     @Override
@@ -66,8 +72,12 @@ public class AddressService implements IAddressService{
     }
 
     @Override
-    public Page<Address> getCustomerAddresses(Long customerId, Pageable pageable) {
-        return addressRepository.findAllByCustomerId(customerId, pageable);
+    public Page<Address> getCustomerAddresses(Pageable pageable) {
+        User user = userService.getCurrentUser();
+        if(user != null){
+            return addressRepository.findAllByCustomerId(user.getId(), pageable);
+        }
+        throw new BadRequestException("User not found");
     }
 
     @Override

@@ -34,6 +34,12 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse> getCurrentUser() {
+        User user = userService.getCurrentUser();
+        UserResponse response = userService.convertToUserResponse(user);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
     @GetMapping("/staffs/{id}")
     public ResponseEntity<ApiResponse> getStaff(@PathVariable Long id) {
         User user = userService.getStaffById(id);
@@ -55,9 +61,9 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
-    @PutMapping("/update-customer/{id}")
-    public ResponseEntity<ApiResponse> updateCustomer(@PathVariable Long id, @RequestBody UserRequest request) {
-        User user = userService.updateCustomer(request, id);
+    @PutMapping("/update-customer")
+    public ResponseEntity<ApiResponse> updateCustomer(@RequestBody UserRequest request) {
+        User user = userService.updateCustomer(request);
         UserResponse response = userService.convertToUserResponse(user);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }

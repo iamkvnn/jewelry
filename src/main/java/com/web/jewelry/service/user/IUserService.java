@@ -17,7 +17,7 @@ public interface IUserService {
     User createCustomer(UserRequest request);
     User createStaff(UserRequest request);
 
-    User updateCustomer(UserRequest request, Long id);
+    User updateCustomer(UserRequest request);
     User updateStaff(UserRequest request, Long id);
     User updateManager(UserRequest request, Long id);
 

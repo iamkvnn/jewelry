@@ -173,16 +173,21 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User updateCustomer(UserRequest request, Long id) {
-        return customerRepository.findById(id)
-                .map(customer -> {
-                    customer.setPhone(request.getPhone());
-                    customer.setFullName(request.getFullName());
-                    customer.setDob(request.getDob());
-                    customer.setGender(request.getGender());
-                    return customerRepository.save(customer);
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    public User updateCustomer(UserRequest request) {
+        User user = getCurrentUser();
+        if(user!= null){
+            return customerRepository.findById(user.getId())
+                    .map(customer -> {
+                        customer.setPhone(request.getPhone());
+                        customer.setFullName(request.getFullName());
+                        customer.setDob(request.getDob());
+                        customer.setGender(request.getGender());
+                        return customerRepository.save(customer);
+                    })
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        }
+        else
+            throw new ResourceNotFoundException("Customer not found");
     }
 
     @Override
