@@ -14,8 +14,8 @@ import java.security.NoSuchAlgorithmException;
 public class GlobalExceptionHandler {
     @ExceptionHandler(value = ResourceNotFoundException.class)
     ResponseEntity<ApiResponse> handlingResourceNotFoundException(ResourceNotFoundException e) {
-        ApiResponse apiResponse = new ApiResponse("404", e.getMessage(), null);
-        return ResponseEntity.status(404).body(apiResponse);
+        ApiResponse apiResponse = new ApiResponse("1000", e.getMessage(), null);
+        return ResponseEntity.ok().body(apiResponse);
     }
     @ExceptionHandler(value = BadRequestException.class)
     public ResponseEntity<ApiResponse> handleBadRequestException(BadRequestException ex) {
