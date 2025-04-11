@@ -13,6 +13,6 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     Page<WishlistItem> findAllByCustomerId(Long customerId, Pageable pageable);
     Optional<WishlistItem> findByCustomerIdAndProductId(Long customerId, Long productId);
     @Modifying
-    @Query("delete from WishlistItem w where w.id = ?1 and w.customer.id = ?2")
-    void deleteByIdAndCustomerId(Long id, Long customerId);
+    @Query("delete from WishlistItem w where w.product.id = ?1 and w.customer.id = ?2")
+    void deleteByProductIdAndCustomerId(Long id, Long customerId);
 }
