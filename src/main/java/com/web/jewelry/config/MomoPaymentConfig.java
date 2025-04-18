@@ -71,7 +71,7 @@ public class MomoPaymentConfig {
             System.out.println("HTTP Response Code: " + response.code());
             System.out.println("HTTP Response Body: " + responseBody);
 
-            return responseBody; // Trả về nội dung thay vì Response
+            return responseBody; // Trả về nội dung
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -107,6 +107,9 @@ public class MomoPaymentConfig {
 
             // Sắp xếp key theo thứ tự alphabet
             StringBuilder rawData = new StringBuilder();
+            rawData.append("accessKey").append("=")
+                    .append(accessKey)
+                    .append("&");
             response.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey()) // Sắp xếp key theo thứ tự alphabet
                     .forEach(entry -> {

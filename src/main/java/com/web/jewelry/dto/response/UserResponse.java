@@ -14,4 +14,5 @@ public class UserResponse {
     private LocalDate dob;
     private EGender gender;
     private String status;
+    private String role;
 }
