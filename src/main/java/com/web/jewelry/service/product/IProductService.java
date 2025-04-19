@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IProductService {
-    Page<ProductResponse> getFilteredProducts(List<Long> categories, String material, Long minPrice, Long maxPrice, List<String> sizes, String dir, Pageable pageable);
+    Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice, Long maxPrice, List<String> sizes, String dir, Pageable pageable);
     Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable);
     Page<ProductResponse> getAllProducts(Pageable pageable);
     ProductResponse updateProduct(Long productId, ProductRequest request);

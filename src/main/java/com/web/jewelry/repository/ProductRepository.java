@@ -15,13 +15,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT DISTINCT p FROM Product p " +
             "JOIN p.productSizes ps " +
-            "WHERE (:categories IS NULL OR p.category.id IN :categories OR p.category.parent.id IN :categories) " +
+            "WHERE (:title IS NULL OR p.title LIKE '%' || :title || '%') " +
+            "AND (:categories IS NULL OR p.category.id IN :categories OR p.category.parent.id IN :categories) " +
             "AND (:material IS NULL OR p.material = :material) " +
             "AND (:sizes IS NULL OR ps.size IN :sizes) " +
             "AND (:minPrice IS NULL OR ps.discountPrice >= :minPrice) " +
             "AND (:maxPrice IS NULL OR ps.discountPrice <= :maxPrice)")
-    Page<Product> findByFilters( @Param("categories") List<Long> categories,
-                                 @Param("material") String material,
+    Page<Product> findByFilters(@Param("title") String title,
+                                @Param("categories") List<Long> categories,
+                                @Param("material") String material,
                                 @Param("minPrice") Long minPrice,
                                 @Param("maxPrice") Long maxPrice,
                                 @Param("sizes") List<String> sizes,
