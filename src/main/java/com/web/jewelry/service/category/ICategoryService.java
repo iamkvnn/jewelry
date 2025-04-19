@@ -8,7 +8,7 @@ import java.util.List;
 
 
 public interface ICategoryService {
-    List<Category> getCategoriesByParentId(Long parentId);
+    List<CategoryResponse> getCategoriesByParentId(Long parentId);
     Category getCategoryById(Long id);
     CategoryResponse getCategoryByName(String name);
     List<CategoryResponse> getAllCategories();
