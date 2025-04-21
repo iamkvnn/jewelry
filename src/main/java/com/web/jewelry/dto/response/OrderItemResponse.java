@@ -12,4 +12,5 @@ public class OrderItemResponse {
     private Long price;
     private Long discountPrice;
     private Long totalPrice;
+    private ReturnItemResponse returnItem;
 }

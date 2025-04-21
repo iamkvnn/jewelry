@@ -1,6 +1,7 @@
 package com.web.jewelry.controller;
 
 import com.web.jewelry.dto.request.OrderRequest;
+import com.web.jewelry.dto.request.ReturnItemRequest;
 import com.web.jewelry.dto.response.AddressResponse;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.OrderResponse;
@@ -13,6 +14,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.web.jewelry.service.order.IOrderService;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -53,6 +57,12 @@ public class OrderController {
         Order order = orderService.placeOrder(orderRequest);
         OrderResponse orderResponse = orderService.convertToResponse(order);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
+    }
+
+    @PostMapping("/return")
+    public ResponseEntity<ApiResponse> returnOrderItem(@RequestBody ReturnItemRequest request, @RequestParam(required = false) List<MultipartFile> proofImages) {
+        orderService.returnOrderItem(request, proofImages);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
     @PutMapping("/{id}/status")

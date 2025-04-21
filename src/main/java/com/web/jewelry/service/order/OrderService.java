@@ -3,6 +3,7 @@ package com.web.jewelry.service.order;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.web.jewelry.dto.request.OrderRequest;
+import com.web.jewelry.dto.request.ReturnItemRequest;
 import com.web.jewelry.dto.response.*;
 import com.web.jewelry.enums.EOrderStatus;
 import com.web.jewelry.enums.EShippingMethod;
@@ -11,6 +12,7 @@ import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
 import com.web.jewelry.repository.OrderRepository;
+import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.productSize.IProductSizeService;
@@ -28,6 +30,7 @@ import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -38,6 +41,7 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final ReturnItemRepository returnItemRepository;
     private final IVoucherService voucherService;
     private final IProductSizeService productSizeService;
     private final IAddressService addressService;
@@ -201,6 +205,29 @@ public class OrderService implements IOrderService {
         } catch (Exception e) {
             throw new BadRequestException("Cannot get shipping fee");
         }
+    }
+
+    @Transactional
+    public void returnOrderItem(ReturnItemRequest request, List<MultipartFile> proofImages) {
+        Order order = getOrder(request.getOrderId());
+        if (order.getStatus() != EOrderStatus.DELIVERED) {
+            throw new BadRequestException("Order is not delivered yet");
+        }
+        OrderItem orderItem = order.getOrderItems().stream()
+                .filter(item -> item.getId().equals(request.getItemId()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in this order"));
+        if (orderItem.getQuantity() < request.getQuantity()) {
+            throw new BadRequestException("Return quantity cannot be greater than order quantity");
+        }
+        order.setStatus(EOrderStatus.RETURN_REQUESTED);
+        returnItemRepository.save(ReturnItem.builder()
+                .quantity(request.getQuantity())
+                .reason(request.getReturnReason())
+                .description(request.getDescription())
+                .orderItem(orderItem)
+                .build());
+        orderRepository.save(order);
     }
 
     private Map<String, Object> getBody(String district, String province, EShippingMethod method) {
