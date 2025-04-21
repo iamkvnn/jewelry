@@ -8,7 +8,6 @@ import com.web.jewelry.dto.response.PaymentResponse;
 import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EPaymentStatus;
 import com.web.jewelry.exception.ResourceNotFoundException;
-import com.web.jewelry.model.CODPayment;
 import com.web.jewelry.model.MomoPayment;
 import com.web.jewelry.model.Order;
 import com.web.jewelry.model.Payment;
@@ -16,11 +15,8 @@ import com.web.jewelry.repository.MomoPaymentRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
-import okhttp3.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import com.nimbusds.jose.shaded.gson.Gson;
-import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -36,13 +32,13 @@ public class MomoPaymentService implements IPaymentService {
     private final MomoPaymentConfig momoConfig;
     private final ModelMapper modelMapper;
 
-    public String getPaymentUrl(Long orderId) throws NoSuchAlgorithmException, InvalidKeyException {
+    public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         Order order = orderService.getOrder(orderId);
         if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)){
             String returnUrl = "https://momo.vn";
-            String notifyUrl = "https://dc4a-2402-800-63b6-f208-449-58f3-e51f-75c6.ngrok-free.app/api/v1/payments/momo-callback ";
-            MomoPaymentRequest request = momoConfig.createPaymentRequest(orderId.toString(), order.getTotalPrice().toString(),
-                    "shiny order", returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.CAPTURE_WALLET);
+            String notifyUrl = "https://ae92-14-169-5-215.ngrok-free.app/api/v1/payments/momo-callback";
+            MomoPaymentRequest request = momoConfig.createPaymentRequest(orderId, order.getTotalPrice().toString(),
+                    "Thanh toán đơn hàng " + orderId, returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM);
 
             String response = momoConfig.sendToMomo(request);
             if(response != null){
@@ -53,10 +49,10 @@ public class MomoPaymentService implements IPaymentService {
         return null;
     }
 
-    public boolean checkPayment(Map<String, Object> response){
+    public void checkPayment(Map<String, Object> response){
         if(Objects.equals(response.get("resultCode"), 0) && momoConfig.isValidSignature(response)){
             System.out.println("ORDER RESPONSE: " + response.get("orderId"));
-            Long orderId = Long.parseLong(response.get("orderId").toString());
+            String orderId = response.get("orderId").toString();
             Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
             System.out.println("ORDER RESPONSE............");
             if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)  && response.get("amount") != null
@@ -74,14 +70,12 @@ public class MomoPaymentService implements IPaymentService {
                         .build();
                 System.out.println("MOMO PAYMENT: " + momoPayment);
                 momoPaymentRepository.save(momoPayment);
-                return true;
             }
         }
-        return false;
     }
 
     @Override
-    public Payment createPayment(Long orderId){
+    public Payment createPayment(String orderId){
         return null;
     }
 

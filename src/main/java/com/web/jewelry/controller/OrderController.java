@@ -21,8 +21,8 @@ public class OrderController {
     private final IOrderService orderService;
 
 
-    @GetMapping("{id}")
-    public ResponseEntity<ApiResponse> getOrder(@PathVariable Long id) {
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse> getOrder(@PathVariable String id) {
         Order order = orderService.getOrder(id);
         OrderResponse orderResponse = orderService.convertToResponse(order);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
@@ -55,8 +55,8 @@ public class OrderController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));
     }
 
-    @PutMapping("{id}/status")
-    public ResponseEntity<ApiResponse> updateOrderStatus(@PathVariable Long id, @RequestParam EOrderStatus status) {
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ApiResponse> updateOrderStatus(@PathVariable String id, @RequestParam EOrderStatus status) {
         Order order = orderService.updateOrderStatus(id, status);
         OrderResponse orderResponse = orderService.convertToResponse(order);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponse));

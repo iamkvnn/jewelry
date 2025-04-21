@@ -22,6 +22,9 @@ public class OrderItem {
     @JoinColumn(name = "order_id")
     private Order order;
 
+    @OneToOne(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private ReturnItem returnItem;
+
     @ManyToOne  
     @JoinColumn(name = "product_size_id")
     private ProductSize productSize;

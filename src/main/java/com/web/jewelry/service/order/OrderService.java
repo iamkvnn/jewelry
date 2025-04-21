@@ -16,6 +16,7 @@ import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import com.web.jewelry.service.user.IUserService;
 import com.web.jewelry.service.voucher.IVoucherService;
+import com.web.jewelry.utils.OrderIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -59,6 +60,12 @@ public class OrderService implements IOrderService {
         Address address = addressService.getAddressById(orderRequest.getShippingAddress().getId());
         Order order = initializeOrder(orderRequest, cart, address);
         List<OrderItem> orderItems = createOrderItems(order, cart, orderRequest);
+        validateOrder(orderRequest, orderItems);
+        order.setOrderItems(orderItems);
+        return orderRepository.save(order);
+    }
+
+    private void validateOrder(OrderRequest orderRequest, List<OrderItem> orderItems) {
         Long total = orderItems.stream()
                 .map(OrderItem::getTotalPrice)
                 .reduce(0L, Long::sum);
@@ -84,18 +91,22 @@ public class OrderService implements IOrderService {
         if (!orderRequest.getTotalPrice().equals(total + orderRequest.getShippingFee() - orderRequest.getFreeShipDiscount() - orderRequest.getPromotionDiscount())) {
             throw new BadRequestException("Total price is not correct");
         }
-        order.setOrderItems(orderItems);
-        return orderRepository.save(order);
     }
 
     private Order initializeOrder(OrderRequest orderRequest, Cart cart, Address address) {
+        LocalDateTime orderDate = LocalDateTime.now();
+        String orderCode = OrderIdGenerator.getInstance().generateCode(orderDate);
+        while (orderRepository.existsById(orderCode)) {
+            orderCode = OrderIdGenerator.getInstance().generateCode(orderDate);
+        }
         return Order.builder()
+                .id(orderCode)
                 .shippingAddress(address)
                 .shippingMethod(orderRequest.getShippingMethod())
                 .paymentMethod(orderRequest.getPaymentMethod())
                 .status(EOrderStatus.PENDING)
                 .note(orderRequest.getNote())
-                .orderDate(LocalDateTime.now())
+                .orderDate(orderDate)
                 .customer(cart.getCustomer())
                 .isReviewed(false)
                 .totalProductPrice(orderRequest.getTotalProductPrice())
@@ -153,9 +164,8 @@ public class OrderService implements IOrderService {
         return orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
-    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
-    public Order getOrder(Long orderId) {
+    public Order getOrder(String orderId) {
         return orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
@@ -165,9 +175,8 @@ public class OrderService implements IOrderService {
         return orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
-    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
-    public Order updateOrderStatus(Long orderId, EOrderStatus status) {
+    public Order updateOrderStatus(String orderId, EOrderStatus status) {
         Order order = getOrder(orderId);
         order.setStatus(status);
         return orderRepository.save(order);

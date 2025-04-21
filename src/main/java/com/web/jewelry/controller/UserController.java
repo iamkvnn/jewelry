@@ -4,6 +4,7 @@ import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.UserResponse;
 import com.web.jewelry.model.Customer;
+import com.web.jewelry.model.Staff;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,13 @@ public class UserController {
     public ResponseEntity<ApiResponse> getAllCustomer(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size){
         Page<Customer> customers = userService.getAllCustomers(PageRequest.of(page-1, size));
         Page<UserResponse> response = userService.convertToUserResponse(customers);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
+
+    @GetMapping("/staffs")
+    public ResponseEntity<ApiResponse> getAllStaff(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size){
+        Page<Staff> staffs = userService.getAllStaff(PageRequest.of(page-1, size));
+        Page<UserResponse> response = userService.convertToUserResponse(staffs);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
