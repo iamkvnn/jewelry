@@ -35,7 +35,11 @@ public class CategoryController {
         CategoryResponse response = categoryService.convertToResponse(category);
         return  ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
-
+    @GetMapping("category/parent-category/{id}")
+    public ResponseEntity<ApiResponse> getCategoryByParentId(@PathVariable Long id){
+        List<CategoryResponse> response = categoryService.getCategoriesByParentId(id);
+        return  ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
     @GetMapping("category")
     public ResponseEntity<ApiResponse> getCategoryByName(@RequestParam String name){
         CategoryResponse category = categoryService.getCategoryByName(name);

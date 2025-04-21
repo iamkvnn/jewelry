@@ -11,9 +11,9 @@ import org.springframework.data.domain.Page;
 public interface IOrderService {
     Order placeOrder(OrderRequest orderRequest);
     Page<Order> getOrders(Long page, Long size);
-    Order getOrder(Long orderId);
+    Order getOrder(String orderId);
     Page<Order> getMyOrders(Long page, Long size);
-    Order updateOrderStatus(Long orderId, EOrderStatus status);
+    Order updateOrderStatus(String orderId, EOrderStatus status);
     Long getEstimateShippingFee(String district, String province, EShippingMethod method);
     OrderResponse convertToResponse(Order order);
     Page<OrderResponse> convertToResponse(Page<Order> orders);

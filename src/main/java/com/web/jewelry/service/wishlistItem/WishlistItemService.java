@@ -16,6 +16,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -42,10 +43,11 @@ public class WishlistItemService implements IWishlistItemService {
                 .build());
     }
 
+    @Transactional
     @Override
     public void deleteWishlistItem(Long id) {
         Long customerId = userService.getCurrentUser().getId();
-        wishlistItemRepository.deleteByIdAndCustomerId(id, customerId);
+        wishlistItemRepository.deleteByProductIdAndCustomerId(id, customerId);
     }
 
     @Override

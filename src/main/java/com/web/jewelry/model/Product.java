@@ -48,7 +48,7 @@ public class Product {
     private List<AttributeValue> attributes;
 
     @OneToMany(mappedBy = "product")
-    private List<Image> images;
+    private List<ProductImage> images;
 
     @JsonIgnore
     @OneToMany(mappedBy = "product")

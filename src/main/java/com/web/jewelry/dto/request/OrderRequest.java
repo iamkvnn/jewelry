@@ -11,7 +11,7 @@ import java.util.Set;
 
 @Data
 public class OrderRequest {
-    private Long id;
+    private String id;
     private Set<CartItemResponse> cartItems;
     private Long totalProductPrice;
     private AddressResponse shippingAddress;

@@ -1,11 +1,9 @@
 package com.web.jewelry.config;
 
-import com.web.jewelry.enums.EUserRole;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,6 +27,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.List;
 
+@RequiredArgsConstructor
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -36,24 +35,34 @@ public class SecurityConfig {
 
     private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**",
             "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/create",
-            "/api/v1/payments/momo-payment",
+            "/api/v1/payments/momo-payment", "/api/v1/payments/vnpay-payment",
             "/api/v1/users/customers/**", "/api/v1/users/staffs/**", "api/v1/users/add-staff"};
 
     @Value("${jwt.signerKey}")
     private String signerKey;
+    @Value("${FE_BASE_URL}")
+    private String feBaseUrl;
+
+    private final JWTAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JWTAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+        httpSecurity.httpBasic(AbstractHttpConfigurer::disable);
         httpSecurity.authorizeHttpRequests(request -> request.requestMatchers(PRIVATE_ENDPOINTS).authenticated()
                 .anyRequest().permitAll());
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
                         .decoder(jwtDecoder())
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                        .authenticationEntryPoint(new JWTAuthenticationEntryPoint()));
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint));
+        httpSecurity.oauth2Login(oauth2 -> oauth2
+                        .loginPage(feBaseUrl + "/login")
+                        .authorizationEndpoint(authorization -> authorization.baseUri("/api/v1/auth/authorize")))
+                        .formLogin(AbstractHttpConfigurer::disable);
         httpSecurity.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
-
         return httpSecurity.build();
     }
     @Bean
@@ -61,7 +70,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(feBaseUrl));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

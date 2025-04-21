@@ -40,9 +40,9 @@ public class ProductService implements IProductService {
 
 
     @Override
-    public Page<ProductResponse> getFilteredProducts(List<Long> categories, String material, Long minPrice,
+    public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
                                                      Long maxPrice, List<String> sizes, String dir, Pageable pageable) {
-        Page<Product> products = productRepository.findByFilters(categories, material, minPrice, maxPrice, sizes, pageable);
+        Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, pageable);
         if( dir != null && (dir.equals("asc") || dir.equals("desc"))) {
             Comparator<Product> comparator = Comparator.comparing(
                     p -> p.getProductSizes().stream()

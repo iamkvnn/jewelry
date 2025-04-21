@@ -19,8 +19,9 @@ public class CategoryService implements ICategoryService{
     private final ModelMapper modelMapper;
 
     @Override
-    public List<Category> getCategoriesByParentId(Long parentId) {
-        return categoryRepository.findAllByParentId(parentId);
+    public List<CategoryResponse> getCategoriesByParentId(Long parentId) {
+        return categoryRepository.findAllByParentId(parentId)
+                .stream().map(this::convertToResponse).toList();
     }
 
     @Override

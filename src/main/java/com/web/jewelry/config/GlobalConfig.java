@@ -1,6 +1,7 @@
 package com.web.jewelry.config;
 
 import com.cloudinary.Cloudinary;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

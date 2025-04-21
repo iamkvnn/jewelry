@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class ProductController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 
+    @PreAuthorize("hasRole('ROLE_MANAGER')")
     @PostMapping("/add")
     ResponseEntity<ApiResponse> addProduct(@RequestBody ProductRequest request) {
         ProductResponse product = productService.addProduct(request);
@@ -49,24 +51,18 @@ public class ProductController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", productService.convertToProductResponse(product)));
     }
 
-    @GetMapping("/search")
-    ResponseEntity<ApiResponse> searchProduct(@RequestParam String title, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
-        Page<ProductResponse> product = productService.findByTitleContaining(title, PageRequest.of(page - 1, size));
-        return ResponseEntity.ok(new ApiResponse("200", "Success", product));
-    }
-
     @GetMapping("/category/{id}")
     ResponseEntity<ApiResponse> getProductsByCategory(@PathVariable Long id, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
         Page<ProductResponse> responses = productService.getProductsByCategory(id, PageRequest.of(page - 1, size));
         return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
     }
 
-    @GetMapping()
-    ResponseEntity<ApiResponse> getFilteredProducts( @RequestParam(required = false) List<Long> categories, @RequestParam(required = false) Long minPrice,
+    @GetMapping("search-and-filter")
+    ResponseEntity<ApiResponse> getFilterAndSearchProducts(@RequestParam(required = false) String title, @RequestParam(required = false) List<Long> categories, @RequestParam(required = false) Long minPrice,
                                                      @RequestParam(required = false) Long maxPrice, @RequestParam(required = false) List<String> productSizes,
                                                      @RequestParam(required = false) String material, @RequestParam(required = false) String dir,
                                                      @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size){
-        Page<ProductResponse> products = productService.getFilteredProducts(categories, material, minPrice,maxPrice, productSizes, dir, PageRequest.of(page - 1, size));
+        Page<ProductResponse> products = productService.getSearchAndFilterProducts(title, categories, material, minPrice,maxPrice, productSizes, dir, PageRequest.of(page - 1, size));
         return ResponseEntity.ok(new ApiResponse("200", "Success", products));
 
     }

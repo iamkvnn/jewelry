@@ -71,7 +71,7 @@ public class AddressService implements IAddressService{
     @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
     public Address getAddressById(Long id) {
-        return addressRepository.findById(id).orElseThrow(() -> new RuntimeException("Address not found"));
+        return addressRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Address not found"));
     }
 
     @Override

@@ -1,17 +1,14 @@
 package com.web.jewelry.config;
 
 import com.web.jewelry.dto.request.MomoPaymentRequest;
-import com.web.jewelry.dto.response.ApiResponse;
 import lombok.Getter;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -67,11 +64,12 @@ public class MomoPaymentConfig {
                 .build();
 
         try (Response response = client.newCall(momoRequest).execute()) {
+            assert response.body() != null;
             String responseBody = response.body().string(); // Đọc body một lần
             System.out.println("HTTP Response Code: " + response.code());
             System.out.println("HTTP Response Body: " + responseBody);
 
-            return responseBody; // Trả về nội dung thay vì Response
+            return responseBody; // Trả về nội dung
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -80,19 +78,17 @@ public class MomoPaymentConfig {
 
     public MomoPaymentRequest createPaymentRequest(String orderId, String amount, String orderInfo,
                                                           String returnUrl, String notifyUrl, String extraData, ERequestType requestType) throws NoSuchAlgorithmException, InvalidKeyException {
-        String requestId = "REQ" + System.currentTimeMillis();
-        String requestRawData = new StringBuilder()
-                .append("accessKey=").append(accessKey).append("&")
-                .append("amount=").append(amount).append("&")
-                .append("extraData=").append(extraData).append("&")
-                .append("ipnUrl=").append(notifyUrl).append("&")
-                .append("orderId=").append(orderId).append("&")
-                .append("orderInfo=").append(orderInfo).append("&")
-                .append("partnerCode=").append(partnerCode).append("&")
-                .append("redirectUrl=").append(returnUrl).append("&")
-                .append("requestId=").append(requestId).append("&")
-                .append("requestType=").append(requestType.getValue())
-                .toString();
+        String requestId = "REQ" + orderId;
+        String requestRawData = "accessKey=" + accessKey + "&" +
+                "amount=" + amount + "&" +
+                "extraData=" + extraData + "&" +
+                "ipnUrl=" + notifyUrl + "&" +
+                "orderId=" + orderId + "&" +
+                "orderInfo=" + orderInfo + "&" +
+                "partnerCode=" + partnerCode + "&" +
+                "redirectUrl=" + returnUrl + "&" +
+                "requestId=" + requestId + "&" +
+                "requestType=" + requestType.getValue();
         System.out.println("RAWDATA: " + requestRawData);
         String signature = generateSignature(requestRawData, secretKey);
         System.out.println("SIGNATURE: " + signature);
@@ -107,6 +103,9 @@ public class MomoPaymentConfig {
 
             // Sắp xếp key theo thứ tự alphabet
             StringBuilder rawData = new StringBuilder();
+            rawData.append("accessKey").append("=")
+                    .append(accessKey)
+                    .append("&");
             response.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey()) // Sắp xếp key theo thứ tự alphabet
                     .forEach(entry -> {
@@ -134,7 +133,8 @@ public class MomoPaymentConfig {
 
     @Getter
     public enum ERequestType {
-        CAPTURE_WALLET("captureWallet");
+        //CAPTURE_WALLET("captureWallet");
+        PAY_WITH_ATM("payWithATM");
         private final String value;
 
         ERequestType(String value) {
