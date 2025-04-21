@@ -2,10 +2,16 @@ package com.web.jewelry.model;
 
 import com.web.jewelry.enums.EReturnReason;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.util.List;
 
-//@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
 public class ReturnItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,6 +22,10 @@ public class ReturnItem {
     private EReturnReason reason;
     private String description;
 
+    @OneToOne
+    @JoinColumn(name = "order_item_id", nullable = false)
     private OrderItem orderItem;
-//    private List<ProofImage> proofImages;
+
+    @OneToMany(mappedBy = "returnItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProofImage> proofImages;
 }

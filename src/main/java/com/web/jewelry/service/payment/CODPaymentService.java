@@ -25,7 +25,7 @@ public class CODPaymentService implements IPaymentService {
     private final ModelMapper modelMapper;
 
     @Override
-    public Payment createPayment(Long orderId) {
+    public Payment createPayment(String orderId) {
         Order order = orderService.getOrder(orderId);
         if (order.getPaymentMethod().equals(EPaymentMethod.COD)) {
             CODPayment payment = CODPayment.builder()

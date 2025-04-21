@@ -6,7 +6,8 @@ import com.web.jewelry.dto.response.ImageResponse;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Image;
 import com.web.jewelry.model.Product;
-import com.web.jewelry.repository.ImageRepository;
+import com.web.jewelry.model.ProductImage;
+import com.web.jewelry.repository.ProductImageRepository;
 import com.web.jewelry.service.product.IProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +24,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class ImageService implements IImageService{
-    private final ImageRepository imageRepository;
+    private final ProductImageRepository productImageRepository;
     private final IProductService productService;
     private final ModelMapper modelMapper;
     private final Cloudinary cloudinary;
 
     @Override
-    public Image getImageById(Long imageId) {
-        return imageRepository.findById(imageId).orElseThrow(() -> new ResourceNotFoundException("Image not found"));
+    public ProductImage getImageById(Long imageId) {
+        return productImageRepository.findById(imageId).orElseThrow(() -> new ResourceNotFoundException("Image not found"));
     }
 
     @Override
@@ -41,7 +42,7 @@ public class ImageService implements IImageService{
             String fileName = file.getOriginalFilename();
             assert fileName != null;
             String publicId = generatePublicId(fileName);
-            Image savedImage = imageRepository.save(Image.builder()
+            ProductImage savedImage = productImageRepository.save(ProductImage.builder()
                     .name(publicId)
                     .url(uploadImage(file, publicId))
                     .product(product)
@@ -72,7 +73,7 @@ public class ImageService implements IImageService{
 
     @Override
     public ImageResponse updateImage(Long imageId, MultipartFile file) {
-        Image image = getImageById(imageId);
+        ProductImage image = getImageById(imageId);
         String fileName = file.getOriginalFilename();
         assert fileName != null;
         String publicId = generatePublicId(fileName);
@@ -80,15 +81,15 @@ public class ImageService implements IImageService{
         image.setName(publicId);
         image.setUrl(uploadImage(file, publicId));
         image.setUpdatedAt(LocalDateTime.now());
-        Image updatedImage = imageRepository.save(image);
+        Image updatedImage = productImageRepository.save(image);
         return convertToImageResponse(updatedImage);
     }
 
     @Override
     public void deleteImage(Long imageId) {
-        imageRepository.findById(imageId).ifPresentOrElse((image) -> {
+        productImageRepository.findById(imageId).ifPresentOrElse((image) -> {
             deleteFromCloudinary(image.getName());
-            imageRepository.delete(image);
+            productImageRepository.delete(image);
         }, () -> {
             throw new ResourceNotFoundException("Image not found");
         });

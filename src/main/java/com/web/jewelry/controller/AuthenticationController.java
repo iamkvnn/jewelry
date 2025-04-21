@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,10 +43,20 @@ public class AuthenticationController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
-    @PostMapping("/token")
-    public ResponseEntity<ApiResponse> authenticate(@RequestBody AuthenticationRequest request, @RequestParam String role) {
-        AuthenticationResponse response = authenticationService.authenticate(request, role);
-        return ResponseEntity.ok(new ApiResponse("200",response.isAuthenticated() ? "Success" : "Failed", response));
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse> authenticate(@RequestBody AuthenticationRequest request) {
+        AuthenticationResponse response = authenticationService.authenticate(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
+
+    @PostMapping("/call-back/google")
+    public ResponseEntity<ApiResponse> googleCallBack(@RequestParam String code) throws IOException {
+        Customer cus = authenticationService.verifyIDTokenAndGetUser(code);
+        AuthenticationRequest request = new AuthenticationRequest();
+        request.setEmail(cus.getEmail());
+        request.setLoginWithGoogle(true);
+        AuthenticationResponse response = authenticationService.authenticate(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
     @PostMapping("/introspect")
@@ -54,17 +65,18 @@ public class AuthenticationController {
         IntrospectResponse introspectResponse = authenticationService.introspect(request);
         return ResponseEntity.ok(new ApiResponse("200", introspectResponse.isValid() ? "Success" : "Failed", introspectResponse));
     }
+
     @PostMapping("/send-email")
     public ResponseEntity<ApiResponse> sendEmail(@RequestBody Map<String, Object> request) {
         String email = (String) request.get("email");
         String code = emailService.sendVerificationEmail(email);
 
-        long expiresAt = System.currentTimeMillis() + 60 * 1000;
+        long expiredAt = System.currentTimeMillis() + 60 * 1000;
         verificationCodes.put(email, code);
         scheduleCodeExpiration(email);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("expiresAt", expiresAt);
+        response.put("expiredAt", expiredAt);
 
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }

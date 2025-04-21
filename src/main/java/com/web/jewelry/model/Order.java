@@ -18,8 +18,7 @@ import java.util.Set;
 @Entity(name = "orders")
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
     private Long totalProductPrice;
     private Long totalPrice;
     private Long shippingFee;

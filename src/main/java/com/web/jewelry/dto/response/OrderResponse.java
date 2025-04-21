@@ -10,7 +10,7 @@ import java.util.Set;
 
 @Data
 public class OrderResponse {
-    private Long id;
+    private String id;
     private Set<OrderItemResponse> orderItems;
     private Long totalProductPrice;
     private AddressResponse shippingAddress;
