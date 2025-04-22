@@ -6,6 +6,7 @@ import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.authentication.AuthenticationService;
@@ -91,5 +92,17 @@ public class AuthenticationController {
     }
     private void scheduleCodeExpiration(String email) {
         scheduler.schedule(() -> verificationCodes.remove(email), 60, TimeUnit.SECONDS);
+    }
+
+    @PostMapping("/reset-password/send-email")
+    public ResponseEntity<ApiResponse> resetPassword(@RequestParam String email, @RequestParam EUserRole role) {
+        userService.sendEmailResetPassword(email, role);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @PostMapping("/reset-password/verify")
+    public ResponseEntity<ApiResponse> verifyResetPassword(@RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 }
