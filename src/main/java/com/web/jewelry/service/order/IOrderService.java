@@ -19,7 +19,7 @@ public interface IOrderService {
     Page<Order> getMyOrders(Long page, Long size);
     Order updateOrderStatus(String orderId, EOrderStatus status);
     Long getEstimateShippingFee(String district, String province, EShippingMethod method);
-    void returnOrderItem(ReturnItemRequest request, List<MultipartFile> proofImages);
+    void returnOrderItem(ReturnItemRequest request);
     OrderResponse convertToResponse(Order order);
     Page<OrderResponse> convertToResponse(Page<Order> orders);
 }

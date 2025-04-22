@@ -208,7 +208,8 @@ public class OrderService implements IOrderService {
     }
 
     @Transactional
-    public void returnOrderItem(ReturnItemRequest request, List<MultipartFile> proofImages) {
+    @Override
+    public void returnOrderItem(ReturnItemRequest request) {
         Order order = getOrder(request.getOrderId());
         if (order.getStatus() != EOrderStatus.DELIVERED) {
             throw new BadRequestException("Order is not delivered yet");

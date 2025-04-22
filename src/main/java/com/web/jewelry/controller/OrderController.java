@@ -9,6 +9,7 @@ import com.web.jewelry.enums.EOrderStatus;
 import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EShippingMethod;
 import com.web.jewelry.model.Order;
+import com.web.jewelry.service.image.ProofImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ import java.util.List;
 @RequestMapping("${api.prefix}/orders")
 public class OrderController {
     private final IOrderService orderService;
-
+    private final ProofImageService proofImageService;
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getOrder(@PathVariable String id) {
@@ -60,8 +61,14 @@ public class OrderController {
     }
 
     @PostMapping("/return")
-    public ResponseEntity<ApiResponse> returnOrderItem(@RequestBody ReturnItemRequest request, @RequestParam(required = false) List<MultipartFile> proofImages) {
-        orderService.returnOrderItem(request, proofImages);
+    public ResponseEntity<ApiResponse> returnOrderItem(@RequestBody ReturnItemRequest request) {
+        orderService.returnOrderItem(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @PostMapping("/return/upload")
+    public ResponseEntity<ApiResponse> uploadReturnItemProof(@RequestParam Long returnItemId, @RequestParam List<MultipartFile> files) {
+        proofImageService.saveImage(returnItemId, files);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
