@@ -69,7 +69,10 @@ public class ProductImageService implements IImageService{
     public void deleteImage(Long imageId) {
         imageSaverContext.setImageSaverStrategy(cloudinary);
         productImageRepository.findById(imageId).ifPresentOrElse((image) -> {
-            imageSaverContext.deleteImage(image.getName());
+            if (image.getId() > 4294) {
+                imageSaverContext.deleteImage(image.getName());
+                log.info("deleted");
+            }
             productImageRepository.delete(image);
         }, () -> {
             throw new ResourceNotFoundException("Image not found");

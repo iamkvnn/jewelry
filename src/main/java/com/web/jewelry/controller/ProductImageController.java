@@ -35,12 +35,6 @@ public class ProductImageController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", images));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse> updateImage(@PathVariable Long id, @RequestParam MultipartFile file) {
-        ImageResponse imageResponse = imageService.updateImage(id, file);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", imageResponse));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteImage(@PathVariable Long id) {
         imageService.deleteImage(id);

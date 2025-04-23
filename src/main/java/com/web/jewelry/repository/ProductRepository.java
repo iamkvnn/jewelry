@@ -20,7 +20,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "AND (:material IS NULL OR p.material = :material) " +
             "AND (:sizes IS NULL OR ps.size IN :sizes) " +
             "AND (:minPrice IS NULL OR ps.discountPrice >= :minPrice) " +
-            "AND (:maxPrice IS NULL OR ps.discountPrice <= :maxPrice)")
+            "AND (:maxPrice IS NULL OR ps.discountPrice <= :maxPrice)" +
+            "AND p.status <> 'NOT_AVAILABLE' ")
     Page<Product> findByFilters(@Param("title") String title,
                                 @Param("categories") List<Long> categories,
                                 @Param("material") String material,
@@ -29,9 +30,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                 @Param("sizes") List<String> sizes,
                                 Pageable pageable);
 
-    @Query("SELECT DISTINCT p FROM Product p WHERE (p.category.id = :categoryId OR p.category.parent.id = :categoryId)")
+    @Query("SELECT DISTINCT p FROM Product p WHERE (p.category.id = :categoryId OR p.category.parent.id = :categoryId) " +
+            "AND p.status <> 'NOT_AVAILABLE'")
     Page<Product> findAllByCategoryId(Long categoryId, Pageable pageable);
 
-    Page<Product> findByTitleContaining(String title, Pageable pageable);
-    boolean existsByTitle(String title);
+    @Query("SELECT p FROM Product p WHERE p.title = :title AND p.status <> 'NOT_AVAILABLE'")
+    boolean existsByTitleAndAvailable(String title);
 }

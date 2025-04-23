@@ -132,6 +132,6 @@ public class AuthenticationService {
             throw new BadRequestException("Failed to retrieve user info from Google");
         }
         String email = (String) userInfo.get("email");
-        return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 }

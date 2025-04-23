@@ -34,7 +34,7 @@ public class BannerImageService implements IImageService {
     }
 
     @Override
-    public List<ImageResponse> addImage(Long productId, List<MultipartFile> files) {
+    public List<ImageResponse> addImage(Long id, List<MultipartFile> files) {
         return null;
     }
 
