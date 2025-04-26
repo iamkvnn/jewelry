@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.ReturnItemRequest;
 import com.web.jewelry.dto.response.*;
+import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EOrderStatus;
 import com.web.jewelry.enums.EShippingMethod;
 import com.web.jewelry.enums.EVoucherType;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
+import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.address.IAddressService;
@@ -26,11 +28,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -47,6 +47,7 @@ public class OrderService implements IOrderService {
     private final IAddressService addressService;
     private final ICartService cartService;
     private final IUserService userService;
+    private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
 
@@ -183,7 +184,26 @@ public class OrderService implements IOrderService {
     public Order updateOrderStatus(String orderId, EOrderStatus status) {
         Order order = getOrder(orderId);
         order.setStatus(status);
+        if (status.equals(EOrderStatus.COMPLETED)){
+            Customer customer = order.getCustomer();
+            customer.setTotalSpent(customer.getTotalSpent() + order.getTotalPrice());
+            customer.setMembershipRank(calcRank(customer.getTotalSpent()));
+            customerRepository.save(customer);
+        }
         return orderRepository.save(order);
+    }
+
+    ////rèactor
+    private EMembershiprank calcRank(Long totalSpent) {
+        if (totalSpent < 1000000) {
+            return EMembershiprank.MEMBER;
+        } else if (totalSpent < 5000000) {
+            return EMembershiprank.SILVER;
+        } else if (totalSpent < 10000000) {
+            return EMembershiprank.GOLD;
+        } else {
+            return EMembershiprank.PLATINUM;
+        }
     }
 
     @Override

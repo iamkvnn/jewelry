@@ -19,7 +19,7 @@ public class Customer extends User {
     @Enumerated(EnumType.STRING)
     private EMembershiprank membershipRank;
     private Long totalSpent;
-    private boolean isSubscribedForNews;
+    private Boolean isSubscribedForNews;
 
     @JsonIgnore
     @OneToMany(mappedBy = "reviewer", cascade = CascadeType.ALL, orphanRemoval = true)

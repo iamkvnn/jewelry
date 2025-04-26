@@ -142,7 +142,7 @@ public class UserService implements IUserService {
     public void setRegisterForNews(boolean isSubscribed) {
         User user = getCurrentUser();
         if (user instanceof Customer customer) {
-            customer.setSubscribedForNews(isSubscribed);
+            customer.setIsSubscribedForNews(isSubscribed);
             customerRepository.save(customer);
         } else {
             throw new BadRequestException("Invalid user role");
