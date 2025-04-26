@@ -1,12 +1,11 @@
 package com.web.jewelry.controller;
 
 import com.web.jewelry.dto.request.OrderRequest;
-import com.web.jewelry.dto.request.ReturnItemRequest;
+import com.web.jewelry.dto.request.ReturnOrderRequest;
 import com.web.jewelry.dto.response.AddressResponse;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.OrderResponse;
 import com.web.jewelry.enums.EOrderStatus;
-import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EShippingMethod;
 import com.web.jewelry.model.Order;
 import com.web.jewelry.service.image.ProofImageService;
@@ -61,14 +60,14 @@ public class OrderController {
     }
 
     @PostMapping("/return")
-    public ResponseEntity<ApiResponse> returnOrderItem(@RequestBody ReturnItemRequest request) {
+    public ResponseEntity<ApiResponse> returnOrderItem(@RequestBody ReturnOrderRequest request) {
         orderService.returnOrderItem(request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
     @PostMapping("/return/upload")
-    public ResponseEntity<ApiResponse> uploadReturnItemProof(@RequestParam Long returnItemId, @RequestParam List<MultipartFile> files) {
-        proofImageService.saveImage(returnItemId, files);
+    public ResponseEntity<ApiResponse> uploadReturnItemProof(@RequestParam Long itemId, @RequestParam List<MultipartFile> files) {
+        proofImageService.saveImage(itemId, files);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 

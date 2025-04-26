@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.ReturnItemRequest;
+import com.web.jewelry.dto.request.ReturnOrderRequest;
 import com.web.jewelry.dto.response.*;
 import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EOrderStatus;
@@ -229,25 +230,43 @@ public class OrderService implements IOrderService {
 
     @Transactional
     @Override
-    public void returnOrderItem(ReturnItemRequest request) {
+    public void returnOrderItem(ReturnOrderRequest request) {
         Order order = getOrder(request.getOrderId());
         if (order.getStatus() != EOrderStatus.DELIVERED) {
             throw new BadRequestException("Order is not delivered yet");
         }
-        OrderItem orderItem = order.getOrderItems().stream()
-                .filter(item -> item.getId().equals(request.getItemId()))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Item not found in this order"));
-        if (orderItem.getQuantity() < request.getQuantity()) {
-            throw new BadRequestException("Return quantity cannot be greater than order quantity");
+        List<ReturnItemRequest> returnItems = request.getItems();
+        if (returnItems == null || returnItems.isEmpty()) {
+            throw new BadRequestException("Return items cannot be empty");
         }
+        Set<Long> itemIds = returnItems.stream()
+                .map(ReturnItemRequest::getItemId)
+                .collect(Collectors.toSet());
+        if (itemIds.size() != returnItems.size()) {
+            throw new BadRequestException("Return items cannot be duplicated");
+        }
+
+        Map<Long, OrderItem> orderItemMap = order.getOrderItems().stream()
+                .collect(Collectors.toMap(OrderItem::getId, item -> item));
+
+        returnItems.forEach(returnItem -> {
+                    OrderItem orderItem = orderItemMap.get(returnItem.getItemId());
+                    if (orderItem == null) {
+                        throw new ResourceNotFoundException("Item with ID " + returnItem.getItemId() + " not found in this order");
+                    }
+
+                    if (orderItem.getQuantity() < returnItem.getQuantity()) {
+                        throw new BadRequestException("Return quantity for item " + orderItem.getId() + " cannot be greater than order quantity");
+                    }
+
+                    returnItemRepository.save(ReturnItem.builder()
+                            .quantity(returnItem.getQuantity())
+                            .reason(returnItem.getReturnReason())
+                            .description(returnItem.getDescription())
+                            .orderItem(orderItem)
+                            .build());
+                });
         order.setStatus(EOrderStatus.RETURN_REQUESTED);
-        returnItemRepository.save(ReturnItem.builder()
-                .quantity(request.getQuantity())
-                .reason(request.getReturnReason())
-                .description(request.getDescription())
-                .orderItem(orderItem)
-                .build());
         orderRepository.save(order);
     }
 

@@ -23,9 +23,9 @@ public class ProofImageService {
     private final ProofImageRepository proofImageRepository;
     private final CloudinaryImageSaverStrategy cloudinaryImageSaverStrategy;
 
-    public void saveImage(Long returnItemId, List<MultipartFile> files) {
+    public void saveImage(Long itemId, List<MultipartFile> files) {
         imageSaverContext.setImageSaverStrategy(cloudinaryImageSaverStrategy);
-        ReturnItem returnItem = returnItemRepository.findById(returnItemId)
+        ReturnItem returnItem = returnItemRepository.findByOrderItemId(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Return item not found"));
         files.forEach(file -> {
             Map<String, String> imageData = imageSaverContext.saveImage(file);

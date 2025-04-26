@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class ReturnItemRequest {
-        private String orderId;
         private Long itemId;
         private Long quantity;
         private EReturnReason returnReason;
