@@ -194,7 +194,6 @@ public class OrderService implements IOrderService {
         return orderRepository.save(order);
     }
 
-    ////rèactor
     private EMembershiprank calcRank(Long totalSpent) {
         if (totalSpent < 1000000) {
             return EMembershiprank.MEMBER;

@@ -5,7 +5,6 @@ import com.web.jewelry.dto.response.ImageResponse;
 import com.web.jewelry.model.Image;
 import com.web.jewelry.service.image.IImageService;
 import com.web.jewelry.service.image.ProductImageService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +12,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-//@RequiredArgsConstructor
 @RequestMapping("${api.prefix}/images")
 public class ProductImageController {
     private final IImageService imageService;

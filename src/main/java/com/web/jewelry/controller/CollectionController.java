@@ -1,11 +1,8 @@
 package com.web.jewelry.controller;
 
-import com.web.jewelry.dto.request.CategoryRequest;
 import com.web.jewelry.dto.request.CollectionRequest;
 import com.web.jewelry.dto.response.ApiResponse;
-import com.web.jewelry.dto.response.CategoryResponse;
 import com.web.jewelry.dto.response.CollectionResponse;
-import com.web.jewelry.model.Category;
 import com.web.jewelry.model.Collection;
 import com.web.jewelry.service.collection.ICollectionService;
 import lombok.RequiredArgsConstructor;

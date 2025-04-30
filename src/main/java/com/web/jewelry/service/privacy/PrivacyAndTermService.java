@@ -24,12 +24,9 @@ public class PrivacyAndTermService implements IPrivacyAndTermService {
     @Override
     public PrivacyAndTerm update(PrivacyAndTermRequest request) {
         PrivacyAndTerm privacyAndTerm = get();
-        if (privacyAndTerm != null) {
-            privacyAndTerm.setContent(request.getContent());
-            privacyAndTerm.setUpdatedAt(LocalDateTime.now());
-            return privacyAndTermRepository.save(privacyAndTerm);
-        }
-        return null;
+        privacyAndTerm.setContent(request.getContent());
+        privacyAndTerm.setUpdatedAt(LocalDateTime.now());
+        return privacyAndTermRepository.save(privacyAndTerm);
     }
 
     @Override

@@ -8,6 +8,4 @@ import java.util.Set;
 public class CartResponse {
     private Long id;
     private Set<CartItemResponse> cartItems;
-    private Long totalPrice;
-    //private Long itemCount;
 }

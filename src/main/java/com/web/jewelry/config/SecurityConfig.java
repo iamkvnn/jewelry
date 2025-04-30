@@ -41,7 +41,10 @@ public class SecurityConfig {
     @Value("${jwt.signerKey}")
     private String signerKey;
     @Value("${FE_BASE_URL}")
-    private String feBaseUrl;
+    private String feBaseUrlCus;
+    @Value("${FE_BASE_URL_ADMIN}")
+    private String feBaseUrlAdmin;
+
 
     private final JWTAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JWTAccessDeniedHandler jwtAccessDeniedHandler;
@@ -56,10 +59,6 @@ public class SecurityConfig {
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));
-        httpSecurity.oauth2Login(oauth2 -> oauth2
-                        .loginPage(feBaseUrl + "/login")
-                        .authorizationEndpoint(authorization -> authorization.baseUri("/api/v1/auth/authorize")))
-                        .formLogin(AbstractHttpConfigurer::disable);
         httpSecurity.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
@@ -70,7 +69,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(feBaseUrl));
+        config.setAllowedOrigins(List.of(feBaseUrlCus, feBaseUrlAdmin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

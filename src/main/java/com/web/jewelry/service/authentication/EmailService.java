@@ -47,6 +47,16 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendBackupConfirmDeleteAccountEmail(String email, String deleteLink) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Xác nhận xóa tài khoản");
+        message.setText("Mật khẩu của bạn đã được thay đổi thành công.\n" +
+                "Nếu bạn không thực hiện thay đổi này, vui lòng nhấp vào liên kết sau để khôi phục mật khẩu của bạn: " + deleteLink);
+
+        mailSender.send(message);
+    }
+
     private String generateVerificationCode() {
         Random random = new Random();
         return String.format("%04d", random.nextInt(10000));

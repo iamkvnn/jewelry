@@ -46,7 +46,7 @@ public class UserService implements IUserService {
     private final PasswordEncoder passwordEncoder;
 
     private final Map<String, String> verificationCodes = new HashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
@@ -116,6 +116,9 @@ public class UserService implements IUserService {
             case STAFF -> getStaffByEmail(email);
             case CUSTOMER -> getCustomerByEmail(email);
         };
+        if (request.getToken() == null && request.getCode() == null) {
+            throw new BadRequestException("Verification code is required");
+        }
         if (request.getCode() != null) {
             if (verificationCodes.containsKey(email + request.getRole()) && verificationCodes.get(email + request.getRole()).equals(request.getCode())) {
                 verificationCodes.remove(email);
