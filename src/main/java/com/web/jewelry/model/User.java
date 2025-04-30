@@ -34,4 +34,6 @@ public abstract class User {
     @Enumerated(EnumType.STRING)
     protected EUserStatus status;
     protected LocalDateTime joinAt;
+    protected String backupToken;
+    protected LocalDateTime backupTokenExpireAt;
 }

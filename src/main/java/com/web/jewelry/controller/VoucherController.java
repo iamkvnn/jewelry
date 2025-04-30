@@ -25,6 +25,12 @@ public class VoucherController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse> searchVouchers(@RequestParam String query) {
+        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.searchVouchers(query));
+        return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
+    }
+
     @GetMapping("/valid")
     public ResponseEntity<ApiResponse> getValidVouchers() {
         List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchers());
@@ -73,4 +79,6 @@ public class VoucherController {
         voucherService.deleteVoucher(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
+
+
 }

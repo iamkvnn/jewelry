@@ -47,7 +47,6 @@ public class CartService implements ICartService, ProductSizeListener {
     @Override
     public void clearMyCart() {
         Cart cart = getMyCart();
-        cart.setTotalPrice(0L);
         cart.getCartItems().clear();
         cartRepository.save(cart);
     }
@@ -56,7 +55,6 @@ public class CartService implements ICartService, ProductSizeListener {
     public void initializeNewCart(Customer customer) {
         cartRepository.save(Cart.builder()
                 .customer(customer)
-                .totalPrice(0L)
                 .build());
     }
 

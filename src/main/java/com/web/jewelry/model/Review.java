@@ -17,6 +17,7 @@ public class Review {
     private Long id;
     private String content;
     private Long rating;
+    private boolean isResponded;
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

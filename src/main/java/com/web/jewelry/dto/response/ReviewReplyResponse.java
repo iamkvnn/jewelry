@@ -14,6 +14,5 @@ public class ReviewReplyResponse {
     private Long id;
     private String content;
     private LocalDateTime createdAt;
-    private Long reviewId;
-    private Staff responseBy;
+    private UserResponse responseBy;
 }

@@ -34,14 +34,17 @@ import java.util.List;
 public class SecurityConfig {
 
     private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**",
-            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/create",
-            "/api/v1/payments/momo-payment", "/api/v1/payments/vnpay-payment",
-            "/api/v1/users/customers/**", "/api/v1/users/staffs/**", "api/v1/users/add-staff"};
+            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/payments/create/**",
+            "/api/v1/payments/momo-payment/**", "/api/v1/payments/vnpay-payment/**",
+            "/api/v1/users/**", "/api/v1/privacy-and-terms/update/**",};
 
     @Value("${jwt.signerKey}")
     private String signerKey;
     @Value("${FE_BASE_URL}")
-    private String feBaseUrl;
+    private String feBaseUrlCus;
+    @Value("${FE_BASE_URL_ADMIN}")
+    private String feBaseUrlAdmin;
+
 
     private final JWTAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JWTAccessDeniedHandler jwtAccessDeniedHandler;
@@ -56,10 +59,6 @@ public class SecurityConfig {
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));
-        httpSecurity.oauth2Login(oauth2 -> oauth2
-                        .loginPage(feBaseUrl + "/login")
-                        .authorizationEndpoint(authorization -> authorization.baseUri("/api/v1/auth/authorize")))
-                        .formLogin(AbstractHttpConfigurer::disable);
         httpSecurity.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
@@ -70,7 +69,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(feBaseUrl));
+        config.setAllowedOrigins(List.of(feBaseUrlCus, feBaseUrlAdmin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

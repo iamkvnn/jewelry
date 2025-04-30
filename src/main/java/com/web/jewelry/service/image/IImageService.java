@@ -11,5 +11,5 @@ public interface IImageService {
     List<ImageResponse> addImage(Long productId, List<MultipartFile> files);
     ImageResponse updateImage(Long imageId, MultipartFile file);
     void deleteImage(Long imageId);
-    ImageResponse convertToImageResponse(Image image);
+    <T> ImageResponse convertToResponse(T image);
 }

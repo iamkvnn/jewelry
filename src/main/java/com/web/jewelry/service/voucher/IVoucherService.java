@@ -11,6 +11,7 @@ import java.util.List;
 
 public interface IVoucherService {
     List<Voucher> getAllVouchers();
+    List<Voucher> searchVouchers(String query);
     Voucher getVoucherById(Long id);
     Voucher getVoucherByCode(String code);
     List<Voucher> getVoucherByType(EVoucherType type);

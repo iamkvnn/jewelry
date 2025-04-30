@@ -39,6 +39,11 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
+    public List<Voucher> searchVouchers(String query) {
+        return voucherRepository.searchByCodeOrName(query);
+    }
+
+    @Override
     public Voucher getVoucherByCode(String code) {
         return voucherRepository.findByCode(code).orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
     }

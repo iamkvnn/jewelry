@@ -6,6 +6,7 @@ import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.authentication.AuthenticationService;
@@ -33,7 +34,7 @@ public class AuthenticationController {
     private final ICartService cartService;
     private final EmailService emailService;
     private final Map<String, String> verificationCodes = new HashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> addUser(@RequestBody UserRequest request) {
@@ -50,11 +51,12 @@ public class AuthenticationController {
     }
 
     @PostMapping("/call-back/google")
-    public ResponseEntity<ApiResponse> googleCallBack(@RequestParam String code) throws IOException {
+    public ResponseEntity<ApiResponse> googleCallBack(@RequestParam String code, @RequestParam EUserRole role) throws IOException {
         Customer cus = authenticationService.verifyIDTokenAndGetUser(code);
         AuthenticationRequest request = new AuthenticationRequest();
         request.setEmail(cus.getEmail());
         request.setLoginWithGoogle(true);
+        request.setRole(role);
         AuthenticationResponse response = authenticationService.authenticate(request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
@@ -89,7 +91,20 @@ public class AuthenticationController {
         }
         return ResponseEntity.ok(new ApiResponse("1001", "Failed", "Verify code failed"));
     }
+
     private void scheduleCodeExpiration(String email) {
         scheduler.schedule(() -> verificationCodes.remove(email), 60, TimeUnit.SECONDS);
+    }
+
+    @PostMapping("/reset-password/send-email")
+    public ResponseEntity<ApiResponse> resetPassword(@RequestParam String email, @RequestParam EUserRole role) {
+        userService.sendEmailResetPassword(email, role);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @PostMapping("/reset-password/verify")
+    public ResponseEntity<ApiResponse> verifyResetPassword(@RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 }

@@ -157,11 +157,6 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public Page<ProductResponse> findByTitleContaining(String title, Pageable pageable) {
-        return convertToProductResponses(productRepository.findByTitleContaining(title, pageable));
-    }
-
-    @Override
     public ProductResponse convertToProductResponse(Product product) {
         ProductResponse response = modelMapper.map(product, ProductResponse.class);
         response.setAttributes(product.getAttributes() != null ? attributeValueService.convertToAttributeValueResponses(product.getAttributes()) : null);
@@ -175,6 +170,6 @@ public class ProductService implements IProductService {
 
     @Override
     public boolean existsByTitle(String title) {
-        return productRepository.existsByTitle(title);
+        return productRepository.existsByTitleAndAvailable(title);
     }
 }

@@ -1,5 +1,6 @@
 package com.web.jewelry.service.user;
 
+import com.web.jewelry.dto.request.ResetPasswordRequest;
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.UserResponse;
 import com.web.jewelry.enums.EMembershiprank;
@@ -15,6 +16,7 @@ import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
+import com.web.jewelry.service.authentication.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -25,7 +27,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @Service
@@ -34,7 +42,11 @@ public class UserService implements IUserService {
     private final ModelMapper modelMapper;
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+
+    private final Map<String, String> verificationCodes = new HashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
     @Override
     public Page<Staff> getAllStaff(Pageable pageable) {
@@ -52,9 +64,101 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public Page<Staff> findStaffByName(String name, Pageable pageable) {
+        return staffRepository.findByFullNameContainingIgnoreCase(name, pageable);
+    }
+
+    @Override
+    public Page<Customer> findCustomerByName(String name, Pageable pageable) {
+        return customerRepository.findByFullNameContainingIgnoreCase(name, pageable);
+    }
+
+    @Override
+    public void changePassword(String oldPassword, String newPassword) {
+        User user = getCurrentUser();
+        if (passwordEncoder.matches(oldPassword, user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(newPassword));
+            String token = UUID.randomUUID().toString();
+            user.setBackupToken(token);
+            user.setBackupTokenExpireAt(LocalDateTime.now().plusDays(1));
+            switch (user.getRole()) {
+                case MANAGER -> managerRepository.save((Manager) user);
+                case STAFF -> staffRepository.save((Staff) user);
+                case CUSTOMER -> customerRepository.save((Customer) user);
+            }
+            emailService.sendBackupChangePasswordEmail(user.getEmail(), "https://example.com/reset-password?token=" + token);
+        } else {
+            throw new BadRequestException("Old password is incorrect");
+        }
+    }
+
+    @Override
+    public void sendEmailResetPassword(String email, EUserRole role) {
+        User user = switch (role) {
+            case MANAGER -> getManagerByEmail(email);
+            case STAFF -> getStaffByEmail(email);
+            case CUSTOMER -> getCustomerByEmail(email);
+        };
+        String code = emailService.sendResetPasswordEmail(user.getEmail());
+        verificationCodes.put(user.getEmail() + user.getRole(), code);
+        scheduleCodeExpiration(user.getEmail() + user.getRole());
+    }
+
+    private void scheduleCodeExpiration(String key) {
+        scheduler.schedule(() -> verificationCodes.remove(key), 120, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        String email = request.getEmail();
+        User user = switch (request.getRole()) {
+            case MANAGER -> getManagerByEmail(email);
+            case STAFF -> getStaffByEmail(email);
+            case CUSTOMER -> getCustomerByEmail(email);
+        };
+        if (request.getToken() == null && request.getCode() == null) {
+            throw new BadRequestException("Verification code is required");
+        }
+        if (request.getCode() != null) {
+            if (verificationCodes.containsKey(email + request.getRole()) && verificationCodes.get(email + request.getRole()).equals(request.getCode())) {
+                verificationCodes.remove(email);
+            } else {
+                throw new BadRequestException("Invalid verification code");
+            }
+        }
+        if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
+            if (user.getBackupTokenExpireAt().isBefore(LocalDateTime.now()) || !user.getBackupToken().equals(request.getToken())) {
+                throw new BadRequestException("Invalid token");
+            }
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setBackupToken(null);
+        user.setBackupTokenExpireAt(null);
+        switch (user.getRole()) {
+            case MANAGER -> managerRepository.save((Manager) user);
+            case STAFF -> staffRepository.save((Staff) user);
+            case CUSTOMER -> customerRepository.save((Customer) user);
+        }
+    }
+
+    @Override
+    public void setRegisterForNews(boolean isSubscribed) {
+        User user = getCurrentUser();
+        if (user instanceof Customer customer) {
+            customer.setIsSubscribedForNews(isSubscribed);
+            customerRepository.save(customer);
+        } else {
+            throw new BadRequestException("Invalid user role");
+        }
+    }
+
+    @Override
     public User createStaff(UserRequest request) {
         if (staffRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistException("Email already exists");
+        }
+        if (staffRepository.existsByPhone(request.getPhone())) {
+            throw new AlreadyExistException("Phone already exists");
         }
         return staffRepository.save(Staff.builder()
                 .username(request.getUsername())
@@ -75,6 +179,9 @@ public class UserService implements IUserService {
     public User createCustomer(UserRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistException("Email already exists");
+        }
+        if (customerRepository.existsByPhone(request.getPhone())) {
+            throw new AlreadyExistException("Phone already exists");
         }
         return customerRepository.save(Customer.builder()
                 .username(request.getUsername())
@@ -128,7 +235,6 @@ public class UserService implements IUserService {
     public User updateStaff(UserRequest request, Long id) {
         return staffRepository.findById(id)
                 .map(staff -> {
-                    staff.setPhone(request.getPhone());
                     staff.setFullName(request.getFullName());
                     staff.setDob(request.getDob());
                     staff.setGender(request.getGender());
@@ -188,7 +294,6 @@ public class UserService implements IUserService {
     @Override
     public User updateCurrentUser(UserRequest request) {
         User user = getCurrentUser();
-        user.setPhone(request.getPhone());
         user.setFullName(request.getFullName());
         user.setDob(request.getDob());
         user.setGender(request.getGender());

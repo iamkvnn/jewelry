@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PostAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -110,6 +108,32 @@ public class UserController {
     @PutMapping("/activate-customer/{id}")
     public ResponseEntity<ApiResponse> activateCustomer(@PathVariable Long id) {
         userService.activateCustomer(id);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @PostMapping("/register-for-news")
+    public ResponseEntity<ApiResponse> registerForNews(@RequestParam boolean isSubscribed) {
+        userService.setRegisterForNews(isSubscribed);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @GetMapping("/search-customers")
+    public ResponseEntity<ApiResponse> searchCustomers(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
+        Page<Customer> customers = userService.findCustomerByName(name, PageRequest.of(page-1, size));
+        Page<UserResponse> response = userService.convertToUserResponse(customers);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
+
+    @GetMapping("/search-staffs")
+    public ResponseEntity<ApiResponse> searchStaffs(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
+        Page<Staff> staffs = userService.findStaffByName(name, PageRequest.of(page-1, size));
+        Page<UserResponse> response = userService.convertToUserResponse(staffs);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", response));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse> changePassword(@RequestParam String oldPassword, @RequestParam String newPassword) {
+        userService.changePassword(oldPassword, newPassword);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 }

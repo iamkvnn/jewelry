@@ -7,7 +7,5 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface IReviewReplyService {
-    ReviewReply getReviewResponse(Long reviewId);
-    ReviewReply createReviewResponse(ReviewReplyRequest reviewReply);
-    ReviewReplyResponse convertToResponse(ReviewReply reviewReply);
+    void createReviewResponse(ReviewReplyRequest reviewReply);
 }

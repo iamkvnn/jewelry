@@ -3,14 +3,19 @@ package com.web.jewelry.service.order;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.web.jewelry.dto.request.OrderRequest;
+import com.web.jewelry.dto.request.ReturnItemRequest;
+import com.web.jewelry.dto.request.ReturnOrderRequest;
 import com.web.jewelry.dto.response.*;
+import com.web.jewelry.enums.EMembershiprank;
 import com.web.jewelry.enums.EOrderStatus;
 import com.web.jewelry.enums.EShippingMethod;
 import com.web.jewelry.enums.EVoucherType;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
+import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.OrderRepository;
+import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.productSize.IProductSizeService;
@@ -24,7 +29,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -38,11 +42,13 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final ReturnItemRepository returnItemRepository;
     private final IVoucherService voucherService;
     private final IProductSizeService productSizeService;
     private final IAddressService addressService;
     private final ICartService cartService;
     private final IUserService userService;
+    private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
 
@@ -179,7 +185,25 @@ public class OrderService implements IOrderService {
     public Order updateOrderStatus(String orderId, EOrderStatus status) {
         Order order = getOrder(orderId);
         order.setStatus(status);
+        if (status.equals(EOrderStatus.COMPLETED)){
+            Customer customer = order.getCustomer();
+            customer.setTotalSpent(customer.getTotalSpent() + order.getTotalPrice());
+            customer.setMembershipRank(calcRank(customer.getTotalSpent()));
+            customerRepository.save(customer);
+        }
         return orderRepository.save(order);
+    }
+
+    private EMembershiprank calcRank(Long totalSpent) {
+        if (totalSpent < 1000000) {
+            return EMembershiprank.MEMBER;
+        } else if (totalSpent < 5000000) {
+            return EMembershiprank.SILVER;
+        } else if (totalSpent < 10000000) {
+            return EMembershiprank.GOLD;
+        } else {
+            return EMembershiprank.PLATINUM;
+        }
     }
 
     @Override
@@ -201,6 +225,48 @@ public class OrderService implements IOrderService {
         } catch (Exception e) {
             throw new BadRequestException("Cannot get shipping fee");
         }
+    }
+
+    @Transactional
+    @Override
+    public void returnOrderItem(ReturnOrderRequest request) {
+        Order order = getOrder(request.getOrderId());
+        if (order.getStatus() != EOrderStatus.DELIVERED) {
+            throw new BadRequestException("Order is not delivered yet");
+        }
+        List<ReturnItemRequest> returnItems = request.getItems();
+        if (returnItems == null || returnItems.isEmpty()) {
+            throw new BadRequestException("Return items cannot be empty");
+        }
+        Set<Long> itemIds = returnItems.stream()
+                .map(ReturnItemRequest::getItemId)
+                .collect(Collectors.toSet());
+        if (itemIds.size() != returnItems.size()) {
+            throw new BadRequestException("Return items cannot be duplicated");
+        }
+
+        Map<Long, OrderItem> orderItemMap = order.getOrderItems().stream()
+                .collect(Collectors.toMap(OrderItem::getId, item -> item));
+
+        returnItems.forEach(returnItem -> {
+                    OrderItem orderItem = orderItemMap.get(returnItem.getItemId());
+                    if (orderItem == null) {
+                        throw new ResourceNotFoundException("Item with ID " + returnItem.getItemId() + " not found in this order");
+                    }
+
+                    if (orderItem.getQuantity() < returnItem.getQuantity()) {
+                        throw new BadRequestException("Return quantity for item " + orderItem.getId() + " cannot be greater than order quantity");
+                    }
+
+                    returnItemRepository.save(ReturnItem.builder()
+                            .quantity(returnItem.getQuantity())
+                            .reason(returnItem.getReturnReason())
+                            .description(returnItem.getDescription())
+                            .orderItem(orderItem)
+                            .build());
+                });
+        order.setStatus(EOrderStatus.RETURN_REQUESTED);
+        orderRepository.save(order);
     }
 
     private Map<String, Object> getBody(String district, String province, EShippingMethod method) {
