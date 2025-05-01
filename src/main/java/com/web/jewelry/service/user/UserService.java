@@ -86,7 +86,7 @@ public class UserService implements IUserService {
                 case STAFF -> staffRepository.save((Staff) user);
                 case CUSTOMER -> customerRepository.save((Customer) user);
             }
-            emailService.sendBackupChangePasswordEmail(user.getEmail(), "https://example.com/reset-password?token=" + token);
+            emailService.sendBackupChangePasswordEmail(user.getEmail(), "http://localhost:5173/recover-password?token=" + token);
         } else {
             throw new BadRequestException("Old password is incorrect");
         }
@@ -297,6 +297,7 @@ public class UserService implements IUserService {
         user.setFullName(request.getFullName());
         user.setDob(request.getDob());
         user.setGender(request.getGender());
+        user.setPhone(request.getPhone());
         return switch (user.getRole()) {
             case MANAGER -> managerRepository.save((Manager) user);
             case STAFF -> staffRepository.save((Staff) user);

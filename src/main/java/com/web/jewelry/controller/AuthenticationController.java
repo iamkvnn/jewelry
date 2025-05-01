@@ -55,6 +55,7 @@ public class AuthenticationController {
         Customer cus = authenticationService.verifyIDTokenAndGetUser(code);
         AuthenticationRequest request = new AuthenticationRequest();
         request.setEmail(cus.getEmail());
+        request.setRole(role);
         request.setLoginWithGoogle(true);
         request.setRole(role);
         AuthenticationResponse response = authenticationService.authenticate(request);
@@ -79,7 +80,7 @@ public class AuthenticationController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("expiredAt", expiredAt);
-
+        System.out.println(code);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 

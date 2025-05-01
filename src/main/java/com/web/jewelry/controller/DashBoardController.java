@@ -89,11 +89,23 @@ public class DashBoardController {
     }
 
     @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/latest-orders")
+    public  ResponseEntity<ApiResponse> getLatestOrders(@RequestParam int month, @RequestParam int year, @RequestParam(required = false, defaultValue = "5" ) int limit) {
+        return ResponseEntity.ok(new ApiResponse("200", "Success", dashboardService.getLatestOrders(month, year, limit)));
+    }
+
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/revenue-by-category")
     public ResponseEntity<ApiResponse> getRevenueByCategory(@RequestParam int year) {
         return ResponseEntity.ok(
                 new ApiResponse("200", "Success", dashboardService.getRevenueByCategory(year))
         );
+    }
+
+    @PreAuthorize("hasRole('MANAGER')")
+    @GetMapping("/product-sold-by-category")
+    public ResponseEntity<ApiResponse> getProductSoldByCategory(@RequestParam int year, @RequestParam int month) {
+        return ResponseEntity.ok(new ApiResponse("200", "Success", dashboardService.getProductSoldByCategory(month, year)));
     }
 
     @PreAuthorize("hasRole('MANAGER')")
