@@ -57,7 +57,7 @@ public class ProductController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
     }
 
-    @GetMapping("search-and-filter")
+    @GetMapping("/search-and-filter")
     ResponseEntity<ApiResponse> getFilterAndSearchProducts(@RequestParam(required = false) String title, @RequestParam(required = false) List<Long> categories, @RequestParam(required = false) Long minPrice,
                                                      @RequestParam(required = false) Long maxPrice, @RequestParam(required = false) List<String> productSizes,
                                                      @RequestParam(required = false) String material, @RequestParam(required = false) String dir,

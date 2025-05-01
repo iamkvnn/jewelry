@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -20,6 +21,8 @@ public class Customer extends User {
     private EMembershiprank membershipRank;
     private Long totalSpent;
     private Boolean isSubscribedForNews;
+    private String deleteAccountToken;
+    private LocalDateTime deleteAccountTokenExpiration;
 
     @JsonIgnore
     @OneToMany(mappedBy = "reviewer", cascade = CascadeType.ALL, orphanRemoval = true)
