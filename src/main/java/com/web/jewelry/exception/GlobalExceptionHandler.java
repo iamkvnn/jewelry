@@ -6,18 +6,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(value = AlreadyExistException.class)
     public ResponseEntity<ApiResponse> handleAlreadyExistException(AlreadyExistException ex) {
         ApiResponse apiResponse = new ApiResponse("409", ex.getMessage(), null);
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiResponse);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @ExceptionHandler(value = ResourceNotFoundException.class)

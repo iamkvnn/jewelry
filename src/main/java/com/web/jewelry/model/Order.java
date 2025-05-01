@@ -43,6 +43,12 @@ public class Order {
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private CODPayment codPayment;
 
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private MomoPayment momoPayment;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private VNPayPayment vnPayPayment;
+
     @ManyToOne
     @JoinColumn(name = "address_id")
     private Address shippingAddress;

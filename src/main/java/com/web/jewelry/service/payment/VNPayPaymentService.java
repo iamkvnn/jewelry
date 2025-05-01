@@ -2,17 +2,14 @@ package com.web.jewelry.service.payment;
 
 import com.web.jewelry.config.VNPayPaymentConfig;
 import com.web.jewelry.dto.request.NotificationRequest;
-import com.web.jewelry.dto.response.PaymentResponse;
 import com.web.jewelry.enums.EPaymentStatus;
 import com.web.jewelry.model.Order;
-import com.web.jewelry.model.Payment;
 import com.web.jewelry.model.VNPayPayment;
 import com.web.jewelry.repository.VNPayPaymentRepository;
 import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,12 +24,12 @@ import java.util.*;
 
 @RequiredArgsConstructor
 @Service
-public class VNPayPaymentService implements IPaymentService{
+public class VNPayPaymentService{
     private final IOrderService orderService;
     private final VNPayPaymentRepository vnPayPaymentRepository;
     private final VNPayPaymentConfig vnPayConfig;
     private final INotificationService notificationService;
-    private final ModelMapper modelMapper;
+    //private final ModelMapper modelMapper;
 
     @Value("${VNPay.vnp_Version}")
     private String vnp_Version;
@@ -97,11 +94,6 @@ public class VNPayPaymentService implements IPaymentService{
         return vnp_Url + "?" + queryUrl;
     }
 
-    @Override
-    public Payment createPayment(String orderId) {
-        return null;
-    }
-
     public boolean checkPayment(HttpServletRequest request) throws NoSuchAlgorithmException, InvalidKeyException {
         Locale localeVN = Locale.forLanguageTag("vi-VN");
         NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
@@ -155,10 +147,5 @@ public class VNPayPaymentService implements IPaymentService{
                             .build());
         }
         return false;
-    }
-
-    @Override
-    public PaymentResponse convertToResponse(Payment payment) {
-        return null;
     }
 }

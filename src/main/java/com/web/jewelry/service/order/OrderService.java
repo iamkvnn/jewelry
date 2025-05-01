@@ -7,10 +7,7 @@ import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.ReturnItemRequest;
 import com.web.jewelry.dto.request.ReturnOrderRequest;
 import com.web.jewelry.dto.response.*;
-import com.web.jewelry.enums.EMembershiprank;
-import com.web.jewelry.enums.EOrderStatus;
-import com.web.jewelry.enums.EShippingMethod;
-import com.web.jewelry.enums.EVoucherType;
+import com.web.jewelry.enums.*;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
@@ -20,6 +17,7 @@ import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.notification.INotificationService;
+import com.web.jewelry.service.payment.CODPaymentService;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import com.web.jewelry.service.user.IUserService;
 import com.web.jewelry.service.voucher.IVoucherService;
@@ -51,6 +49,7 @@ public class OrderService implements IOrderService {
     private final ICartService cartService;
     private final IUserService userService;
     private final INotificationService notificationService;
+    private final CODPaymentService codPaymentService;
     private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
@@ -71,7 +70,11 @@ public class OrderService implements IOrderService {
         List<OrderItem> orderItems = createOrderItems(order, cart, orderRequest);
         validateOrder(orderRequest, orderItems);
         order.setOrderItems(orderItems);
-        return orderRepository.save(order);
+        Order newOrder = orderRepository.save(order);
+        if (newOrder.getPaymentMethod() == EPaymentMethod.COD) {
+            newOrder.setCodPayment(codPaymentService.createPayment(order));
+        }
+        return newOrder;
     }
 
     private void validateOrder(OrderRequest orderRequest, List<OrderItem> orderItems) {
@@ -303,7 +306,17 @@ public class OrderService implements IOrderService {
 
     @Override
     public OrderResponse convertToResponse(Order order) {
-        return modelMapper.map(order, OrderResponse.class);
+        PaymentResponse paymentResponse = switch (order.getPaymentMethod()) {
+            case COD -> modelMapper.map(order.getCodPayment(), PaymentResponse.class);
+            case MOMO -> modelMapper.map(order.getMomoPayment(), PaymentResponse.class);
+            case VN_PAY -> modelMapper.map(order.getVnPayPayment(), PaymentResponse.class);
+        };
+        order.setCodPayment(null);
+        order.setMomoPayment(null);
+        order.setVnPayPayment(null);
+        OrderResponse orderResponse = modelMapper.map(order, OrderResponse.class);
+        orderResponse.setPayment(paymentResponse);
+        return orderResponse;
     }
 
     @Override
