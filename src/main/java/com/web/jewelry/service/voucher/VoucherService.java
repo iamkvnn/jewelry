@@ -1,9 +1,11 @@
 package com.web.jewelry.service.voucher;
 
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.VoucherApplicabilityRequest;
 import com.web.jewelry.dto.request.VoucherRequest;
 import com.web.jewelry.dto.response.VoucherResponse;
+import com.web.jewelry.enums.EVoucherApplicabilityType;
 import com.web.jewelry.enums.EVoucherType;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
@@ -11,6 +13,7 @@ import com.web.jewelry.model.Voucher;
 import com.web.jewelry.model.VoucherApplicability;
 import com.web.jewelry.repository.VoucherApplicabilityRepository;
 import com.web.jewelry.repository.VoucherRepository;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -18,13 +21,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class VoucherService implements IVoucherService {
     private final VoucherRepository voucherRepository;
     private final VoucherApplicabilityRepository voucherApplicabilityRepository;
+    private final INotificationService notificationService;
     private final IUserService userService;
     private final ModelMapper modelMapper;
 
@@ -61,6 +68,7 @@ public class VoucherService implements IVoucherService {
     @Transactional
     @Override
     public Voucher addVoucher(VoucherRequest request) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
         validateRequest(request);
         if (voucherRepository.existsByCode(request.getCode())) {
             throw new BadRequestException("Voucher code already exists");
@@ -84,6 +92,31 @@ public class VoucherService implements IVoucherService {
                         .type(applicability.getType())
                         .build())
                     ).toList());
+        if (voucher.getType() == EVoucherType.FREESHIP) {
+            notificationService.sendNotificationToAllCustomer(
+                    NotificationRequest.builder()
+                            .title("Bạn nhận được 1 voucher mới")
+                            .content("Bạn vừa nhận được 1 voucher FREESHIP mới với mã " + voucher.getCode() +
+                                    ".\n Giảm tới " + voucher.getApplyLimit() + " cho đơn hàng từ " +  voucher.getMinimumToApply() +
+                                    ".\n Mã có hiệu lực từ " + voucher.getValidFrom().format(formatter) + " - " + voucher.getValidTo().format(formatter) +
+                                    ".\n Bắt đầu mua sắm nào!")
+                            .build());
+        }
+        Set<Long> cusId = new HashSet<>();
+        voucher.getVoucherApplicabilities().stream().filter(
+                voucherApplicability -> voucherApplicability.getType() == EVoucherApplicabilityType.CUSTOMER
+        ).forEach(voucherApplicability -> cusId.add(voucherApplicability.getApplicableObjectId()));
+        if (!cusId.isEmpty()) {
+            notificationService.sendNotificationToSpecificCustomer(
+                    NotificationRequest.builder()
+                            .title("Bạn nhận được 1 voucher mới")
+                            .content("Bạn vừa nhận được 1 voucher PROMOTION mới với mã " + voucher.getCode() +
+                                    ".\n Giảm tới " + voucher.getApplyLimit() + " cho đơn hàng từ " +  voucher.getMinimumToApply() +
+                                    ".\n Mã có hiệu lực từ " + voucher.getValidFrom().format(formatter) + " - " + voucher.getValidTo().format(formatter) +
+                                    ".\n Bắt đầu mua sắm nào!")
+                            .customerIds(cusId)
+                            .build());
+        }
         return voucher;
     }
 

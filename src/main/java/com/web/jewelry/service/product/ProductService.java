@@ -1,5 +1,6 @@
 package com.web.jewelry.service.product;
 
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.request.ProductRequest;
 import com.web.jewelry.dto.request.ProductSizeRequest;
 import com.web.jewelry.dto.response.ProductResponse;
@@ -12,7 +13,9 @@ import com.web.jewelry.repository.ProductRepository;
 import com.web.jewelry.service.category.ICategoryService;
 import com.web.jewelry.service.collection.ICollectionService;
 import com.web.jewelry.service.attribute.IAttributeValueService;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.productSize.IProductSizeService;
+import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -26,6 +29,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -36,8 +40,9 @@ public class ProductService implements IProductService {
     private final ICollectionService collectionService;
     private final IProductSizeService productSizeService;
     private final IAttributeValueService attributeValueService;
+    private final IUserService userService;
     private final ModelMapper modelMapper;
-
+    private final INotificationService notificationService;
 
     @Override
     public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
@@ -79,10 +84,18 @@ public class ProductService implements IProductService {
     @Override
     public ProductResponse updateProduct(Long productId, ProductRequest request) {
         validateProductSizes(request.getProductSizes());
+        AtomicBoolean isBackInStock = new AtomicBoolean(false);
         return productRepository.findById(productId)
                 .map(product -> {
                     if (existsByTitle(request.getTitle()) && !product.getTitle().equals(request.getTitle())) {
                         throw new AlreadyExistException("Product title already exists please check again!");
+                    }
+                    Long totalStock = request.getProductSizes().stream()
+                            .map(ProductSizeRequest::getStock)
+                            .reduce(0L, Long::sum);
+                    if (product.getStatus() == EProductStatus.OUT_OF_STOCK && totalStock > 0) {
+                        product.setStatus(EProductStatus.IN_STOCK);
+                        isBackInStock.set(true);
                     }
                     Collection collection = request.getCollection() != null ? collectionService.getCollectionById(request.getCollection().getId()) : null;
                     Category category = request.getCategory() != null ? categoryService.getCategoryById(request.getCategory().getId()) : null;
@@ -93,6 +106,44 @@ public class ProductService implements IProductService {
                     Optional.ofNullable(request.getAttributes())
                             .ifPresent(attributes -> product.setAttributes(attributeValueService.updateProductAttributes(product, attributes)));
                     product.setProductSizes(productSizeService.updateProductSize(product, request.getProductSizes()));
+                    long totalStock = product.getProductSizes().stream()
+                            .map(ProductSize::getStock)
+                            .reduce(0L, Long::sum);
+                    Long bigDiscount = product.getProductSizes().stream()
+                            .filter(productSize -> productSize.getDiscountRate() != null && productSize.getDiscountRate() >= 20)
+                            .map(ProductSize::getDiscountRate)
+                            .max(Comparator.naturalOrder())
+                            .orElse(0L);
+                    if (isBackInStock.get())
+                        notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                                        .title("Sản phẩm '" + product.getTitle() + "' đã có hàng.")
+                                        .content("Sản phẩm '" + product.getTitle() + "' đã có hàng. Hãy nhanh tay đặt hàng trước khi hết hàng.")
+                                        .customerIds(product.getWishlistItems().stream()
+                                                .map(WishlistItem::getCustomer)
+                                                .map(Customer::getId)
+                                                .collect(Collectors.toSet()))
+                                        .isEmail(true)
+                                .build());
+                    if (totalStock <= 3 && !isBackInStock.get() && product.getStatus() == EProductStatus.IN_STOCK)
+                        notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                                        .title("Sản phẩm '" + product.getTitle() + "' mà bạn quan tâm sắp hết hàng.")
+                                        .content("Sản phẩm '" + product.getTitle() + "' mà bạn quan tâm sắp hết hàng. Hãy nhanh tay đặt hàng trước khi hết hàng.")
+                                        .customerIds(product.getWishlistItems().stream()
+                                                .map(WishlistItem::getCustomer)
+                                                .map(Customer::getId)
+                                                .collect(Collectors.toSet()))
+                                .build());
+                    if (bigDiscount >= 20 && totalStock > 0)
+                        notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                                        .title("Sản phẩm '" + product.getTitle() + "' đang có khuyến mãi lớn.")
+                                        .content("Sản phẩm '" + product.getTitle() + "' đang có chương trình khuyến mãi lớn lên tới " + bigDiscount  +
+                                                "%.\nHãy nhanh tay đặt hàng trước khi hết hàng.")
+                                        .customerIds(product.getWishlistItems().stream()
+                                                .map(WishlistItem::getCustomer)
+                                                .map(Customer::getId)
+                                                .collect(Collectors.toSet()))
+                                        .isEmail(true)
+                                .build());
                     return product;
                 })
                 .map(this::convertToProductResponse)
@@ -130,6 +181,12 @@ public class ProductService implements IProductService {
         Optional.ofNullable(request.getAttributes())
                 .ifPresent(attributes -> product.setAttributes(attributeValueService.addProductAttributes(product, attributes)));
         product.setProductSizes(productSizeService.addProductSize(product, request.getProductSizes()));
+        notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                .title("Có sản phẩm mới! Nhanh tay đặt hàng nào.")
+                .content("Sản phẩm mới '" + product.getTitle() + "' vừa được thêm vào cừa hàng. Hãy ghé thăm cửa hàng để xem thêm các thông tin về sản phẩm.")
+                .customerIds(userService.getAllUerRegisteredForNews())
+                .isEmail(true)
+                .build());
         return convertToProductResponse(product);
     }
 

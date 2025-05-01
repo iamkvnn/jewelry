@@ -1,7 +1,9 @@
 package com.web.jewelry.repository;
 
+import com.web.jewelry.enums.EOrderStatus;
 import com.web.jewelry.model.Order;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +24,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 
     @Query("SELECT COUNT(o) FROM orders o WHERE o.orderDate BETWEEN :from AND :to AND o.status = 'RETURNED'")
     Long countByOrderDateBetweenAndReturned(LocalDateTime from, LocalDateTime to);
+
+    Page<Order> findByStatus(EOrderStatus status, Pageable pageable);
+
+    Page<Order> findByCustomerIdAndStatus(Long customerId, EOrderStatus status, Pageable pageable);
 }

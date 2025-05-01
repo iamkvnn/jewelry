@@ -1,5 +1,6 @@
 package com.web.jewelry.service.reviewReplyService;
 
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.request.ReviewReplyRequest;
 import com.web.jewelry.dto.response.ReviewReplyResponse;
 import com.web.jewelry.exception.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import com.web.jewelry.model.ReviewReply;
 import com.web.jewelry.model.Staff;
 import com.web.jewelry.repository.ReviewReplyRepository;
 import com.web.jewelry.repository.ReviewRepository;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import com.web.jewelry.service.review.IReviewService;
 import com.web.jewelry.service.user.IUserService;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +31,6 @@ public class ReviewReplyService implements IReviewReplyService {
     private final IReviewService reviewService;
     private final ReviewRepository reviewRepository;
     private final IUserService userService;
-    private final ModelMapper modelMapper;
 
     @Transactional
     @Override

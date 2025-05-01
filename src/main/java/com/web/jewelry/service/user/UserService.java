@@ -1,5 +1,6 @@
 package com.web.jewelry.service.user;
 
+import com.web.jewelry.dto.request.EmailRequest;
 import com.web.jewelry.dto.request.ResetPasswordRequest;
 import com.web.jewelry.dto.request.UserRequest;
 import com.web.jewelry.dto.response.UserResponse;
@@ -16,7 +17,7 @@ import com.web.jewelry.model.User;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.ManagerRepository;
 import com.web.jewelry.repository.StaffRepository;
-import com.web.jewelry.service.authentication.EmailService;
+import com.web.jewelry.service.email.EmailQueueService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -27,13 +28,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -42,7 +41,7 @@ public class UserService implements IUserService {
     private final ModelMapper modelMapper;
     private final CustomerRepository customerRepository;
     private final ManagerRepository managerRepository;
-    private final EmailService emailService;
+    private final EmailQueueService emailQueueService;
     private final PasswordEncoder passwordEncoder;
 
     private final Map<String, String> verificationCodes = new HashMap<>();
@@ -61,6 +60,14 @@ public class UserService implements IUserService {
     @Override
     public Page<Manager> getAllManagers(Pageable pageable) {
         return managerRepository.findAll(pageable);
+    }
+
+    @Override
+    public Set<Long> getAllUerRegisteredForNews() {
+        return customerRepository.findAllByIsSubscribedForNews().stream()
+                .filter(customer -> customer.getStatus() == EUserStatus.ACTIVE)
+                .map(Customer::getId)
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -86,7 +93,8 @@ public class UserService implements IUserService {
                 case STAFF -> staffRepository.save((Staff) user);
                 case CUSTOMER -> customerRepository.save((Customer) user);
             }
-            emailService.sendBackupChangePasswordEmail(user.getEmail(), "http://localhost:5173/recover-password?token=" + token);
+            emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Xác nhận thay đổi mật khẩu", "Mật khẩu của bạn đã được thay đổi thành công.\n" +
+                    "Nếu bạn không thực hiện thay đổi này, vui lòng nhấp vào liên kết sau để khôi phục mật khẩu của bạn: https://example.com/reset-password?token=" + token));
         } else {
             throw new BadRequestException("Old password is incorrect");
         }
@@ -99,7 +107,13 @@ public class UserService implements IUserService {
             case STAFF -> getStaffByEmail(email);
             case CUSTOMER -> getCustomerByEmail(email);
         };
-        String code = emailService.sendResetPasswordEmail(user.getEmail());
+        String code = generateVerificationCode();
+        String roleString = switch (role) {
+            case MANAGER -> "quản lý";
+            case STAFF -> "nhân viên";
+            case CUSTOMER -> "thành viên";
+        };
+        emailQueueService.enqueue(new EmailRequest(email, "Xác nhận khôi phục mật khẩu tài khoản " + roleString + " tại Shiny", "Mã xác nhận của bạn là: " + code));
         verificationCodes.put(user.getEmail() + user.getRole(), code);
         scheduleCodeExpiration(user.getEmail() + user.getRole());
     }
@@ -126,7 +140,7 @@ public class UserService implements IUserService {
                 throw new BadRequestException("Invalid verification code");
             }
         }
-        if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
+        else if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
             if (user.getBackupTokenExpireAt().isBefore(LocalDateTime.now()) || !user.getBackupToken().equals(request.getToken())) {
                 throw new BadRequestException("Invalid token");
             }
@@ -212,11 +226,6 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User getManagerById(Long id) {
-        return managerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
-    }
-
-    @Override
     public User getCustomerByEmail(String email) {
         return customerRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
     }
@@ -283,12 +292,19 @@ public class UserService implements IUserService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         String scope = authentication.getAuthorities().stream().findFirst().orElseThrow(() -> new BadRequestException("Invalid scope")).getAuthority();
-        return switch (scope) {
+        User user = switch (scope) {
             case "ROLE_MANAGER" -> getManagerByEmail(email);
             case "ROLE_STAFF" -> getStaffByEmail(email);
             case "ROLE_CUSTOMER" -> getCustomerByEmail(email);
             default -> throw new BadRequestException("Invalid user role");
         };
+        if (user.getStatus() == EUserStatus.REMOVED) {
+            throw new ResourceNotFoundException("User not found");
+        }
+        if (user.getStatus() == EUserStatus.BANNED) {
+            throw new BadRequestException("Account has been banned");
+        }
+        return user;
     }
 
     @Override
@@ -297,7 +313,6 @@ public class UserService implements IUserService {
         user.setFullName(request.getFullName());
         user.setDob(request.getDob());
         user.setGender(request.getGender());
-        user.setPhone(request.getPhone());
         return switch (user.getRole()) {
             case MANAGER -> managerRepository.save((Manager) user);
             case STAFF -> staffRepository.save((Staff) user);
@@ -306,12 +321,32 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public void deleteCurrentCustomer() {
-        User user = getCurrentUser();
+    public void sendRequestDeleteCurrentCustomer() {
+        Customer user = (Customer) getCurrentUser();
         if (Objects.requireNonNull(user.getRole()) == EUserRole.CUSTOMER) {
-            customerRepository.delete((Customer) user);
+            String token = UUID.randomUUID().toString();
+            user.setDeleteAccountToken(token);
+            user.setDeleteAccountTokenExpiration(LocalDateTime.now().plusMinutes(5));
+            emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Xác nhận xóa tài khoản", "Tài khoản của bạn đã được gửi yêu cầu xóa\n" +
+                "Nếu bạn không thực hiện thay đổi này vui lòng bỏ qua email này. Nếu thực sự muốn xoóa, vui lòng nhấp vào liên kết sau trong vòng 5 phút để xóa tài khoản của bạn: https://example.com/confirm-delete?token=" + token));
+            customerRepository.save(user);
         } else {
             throw new BadRequestException("Invalid user role");
+        }
+    }
+
+    @Override
+    public void confirmDeleteCurrentCustomer(String token) {
+        Customer user = customerRepository.findByDeleteAccountToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid token"));
+        if (user.getDeleteAccountToken() != null && user.getDeleteAccountTokenExpiration() != null) {
+            if (user.getDeleteAccountTokenExpiration().isBefore(LocalDateTime.now()) || !user.getDeleteAccountToken().equals(token)) {
+                throw new BadRequestException("Invalid token");
+            }
+            user.setStatus(EUserStatus.REMOVED);
+            customerRepository.save(user);
+        } else {
+            throw new BadRequestException("Invalid token");
         }
     }
 
@@ -325,4 +360,8 @@ public class UserService implements IUserService {
         return users.map(this::convertToUserResponse);
     }
 
+    private String generateVerificationCode() {
+        Random random = new Random();
+        return String.format("%04d", random.nextInt(10000));
+    }
 }

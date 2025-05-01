@@ -1,17 +1,22 @@
 package com.web.jewelry.service.notification;
 
+import com.web.jewelry.dto.request.EmailRequest;
 import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.response.NotificationResponse;
 import com.web.jewelry.enums.ENotificationStatus;
+import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
 import com.web.jewelry.repository.NotificationRepository;
 import com.web.jewelry.repository.UserNotificationRepository;
+import com.web.jewelry.service.email.EmailQueueService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +28,28 @@ public class NotificationService implements INotificationService {
     private final NotificationRepository notificationRepository;
     private final UserNotificationRepository userNotificationRepository;
     private final IUserService userService;
+    private final EmailQueueService emailQueueService;
     private final ModelMapper modelMapper;
 
     @Transactional
     @Override
     public void sendNotificationToSpecificCustomer(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
-        request.getCustomerIds().forEach(customerId -> userNotificationRepository.save(UserNotification.builder()
-                .customer((Customer) userService.getCustomerById(customerId))
-                .notification(notification)
-                .status(ENotificationStatus.UNREAD)
-                .build()));
+        request.getCustomerIds().forEach(customerId -> {
+            Customer customer = (Customer) userService.getCustomerById(customerId);
+            userNotificationRepository.save(UserNotification.builder()
+                    .customer(customer)
+                    .notification(notification)
+                    .status(ENotificationStatus.UNREAD)
+                    .build());
+            if (request.isEmail()) {
+                emailQueueService.enqueue(new EmailRequest(
+                        customer.getEmail(),
+                        notification.getTitle(),
+                        notification.getContent()
+                ));
+            }
+        });
     }
 
     @Transactional
@@ -49,20 +65,6 @@ public class NotificationService implements INotificationService {
 
     @Transactional
     @Override
-    public void sendNotificationToSpecificStaff(NotificationRequest request) {
-        Notification notification = notificationRepository.save(createBaseNotification(request));
-        request.getStaffIds().forEach(staffId -> {
-            UserNotification userNotification = UserNotification.builder()
-                    .staff((Staff) userService.getStaffById(staffId))
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build();
-            userNotificationRepository.save(userNotification);
-        });
-    }
-
-    @Transactional
-    @Override
     public void sendNotificationToAllStaff(NotificationRequest request) {
         Notification notification = notificationRepository.save(createBaseNotification(request));
         userService.getAllStaff(Pageable.unpaged()).forEach(staff -> userNotificationRepository.save(UserNotification.builder()
@@ -70,20 +72,6 @@ public class NotificationService implements INotificationService {
                 .notification(notification)
                 .status(ENotificationStatus.UNREAD)
                 .build()));
-    }
-
-    @Transactional
-    @Override
-    public void sendNotificationToSpecificManager(NotificationRequest request) {
-        Notification notification = notificationRepository.save(createBaseNotification(request));
-        request.getManagerIds().forEach(managerId -> {
-            UserNotification userNotification = UserNotification.builder()
-                    .manager((Manager) userService.getManagerById(managerId))
-                    .notification(notification)
-                    .status(ENotificationStatus.UNREAD)
-                    .build();
-            userNotificationRepository.save(userNotification);
-        });
     }
 
     @Transactional
@@ -101,32 +89,42 @@ public class NotificationService implements INotificationService {
         return Notification.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
-                .type(request.getType())
                 .sentAt(LocalDateTime.now())
                 .build();
     }
 
     @Override
-    public Page<NotificationResponse> getCustomerNotifications(Long customerId, Pageable pageable) {
-        return userNotificationRepository.findAllByCustomerId(customerId, pageable)
-                .map(this::convertToResponse);
+    public Page<NotificationResponse> getNotifications(int page, int size) {
+        User user = userService.getCurrentUser();
+        return switch (user.getRole()) {
+            case CUSTOMER -> convertToResponse(userNotificationRepository.findAllByCustomerId(user.getId(),
+                    PageRequest.of(page - 1, size, Sort.by("status").descending().and(Sort.by("notification.sentAt").descending()))));
+            case STAFF -> convertToResponse(userNotificationRepository.findAllByStaffId(user.getId(),
+                    PageRequest.of(page - 1, size, Sort.by("status").descending().and(Sort.by("notification.sentAt").descending()))));
+            case MANAGER -> convertToResponse(userNotificationRepository.findAllByManagerId(user.getId(),
+                    PageRequest.of(page - 1, size, Sort.by("status").descending().and(Sort.by("notification.sentAt").descending()))));
+        };
     }
 
     @Override
-    public Page<NotificationResponse> getStaffNotifications(Long staffId, Pageable pageable) {
-        return userNotificationRepository.findAllByStaffId(staffId, pageable)
-                .map(this::convertToResponse);
-    }
-
-    @Override
-    public Page<NotificationResponse> getManagerNotifications(Long managerId, Pageable pageable) {
-        return userNotificationRepository.findAllByManagerId(managerId, pageable)
-                .map(this::convertToResponse);
+    public Long countUnreadNotification(){
+        User user = userService.getCurrentUser();
+        return switch (user.getRole()) {
+            case CUSTOMER -> userNotificationRepository.countUnreadByCustomer(user.getId());
+            case STAFF -> userNotificationRepository.countUnreadByStaff(user.getId());
+            case MANAGER -> userNotificationRepository.countUnreadByManager(user.getId());
+        };
     }
 
     @Override
     public void markAsRead(Long notificationId) {
+        User user = userService.getCurrentUser();
         userNotificationRepository.findById(notificationId).ifPresentOrElse(userNotification -> {
+            if ((userNotification.getCustomer() == null && user.getRole() == EUserRole.CUSTOMER) ||
+                (userNotification.getStaff() == null && user.getRole() == EUserRole.STAFF) ||
+                (userNotification.getManager() == null && user.getRole() == EUserRole.MANAGER)) {
+                throw new ResourceNotFoundException("Notification not found");
+            }
             userNotification.setStatus(ENotificationStatus.READ);
             userNotificationRepository.save(userNotification);
         }, () -> {
@@ -135,58 +133,43 @@ public class NotificationService implements INotificationService {
     }
 
     @Override
-    public void markAsReadAllForUser(Long customerId) {
-        userNotificationRepository.findAllByCustomerId(customerId, Pageable.unpaged())
-                .forEach(userNotification -> {
-                    userNotification.setStatus(ENotificationStatus.READ);
-                    userNotificationRepository.save(userNotification);
-                });
-    }
-
-    @Override
-    public void markAsReadAllForStaff(Long staffId) {
-        userNotificationRepository.findAllByStaffId(staffId, Pageable.unpaged())
-                .forEach(userNotification -> {
-                    userNotification.setStatus(ENotificationStatus.READ);
-                    userNotificationRepository.save(userNotification);
-                });
-    }
-
-    @Override
-    public void markAsReadAllForManager(Long managerId) {
-        userNotificationRepository.findAllByManagerId(managerId, Pageable.unpaged())
-                .forEach(userNotification -> {
-                    userNotification.setStatus(ENotificationStatus.READ);
-                    userNotificationRepository.save(userNotification);
-                });
+    public void markAsReadAll() {
+        User user = userService.getCurrentUser();
+        switch (user.getRole()) {
+            case CUSTOMER -> userNotificationRepository.markAsReadByCustomerId(user.getId());
+            case STAFF -> userNotificationRepository.markAsReadByStaffId(user.getId());
+            case MANAGER -> userNotificationRepository.markAsReadByManagerId(user.getId());
+        }
     }
 
     @Override
     public void deleteNotification(Long notificationId) {
-        userNotificationRepository.findById(notificationId).ifPresentOrElse(userNotificationRepository::delete, () -> {
+        User user = userService.getCurrentUser();
+        userNotificationRepository.findById(notificationId).ifPresentOrElse(userNotification -> {
+            if ((userNotification.getCustomer() == null && user.getRole() == EUserRole.CUSTOMER) ||
+                (userNotification.getStaff() == null && user.getRole() == EUserRole.STAFF) ||
+                (userNotification.getManager() == null && user.getRole() == EUserRole.MANAGER)) {
+                throw new ResourceNotFoundException("Notification not found");
+            }
+            userNotificationRepository.delete(userNotification);
+        }, () -> {
             throw new ResourceNotFoundException("Notification not found");
         });
     }
 
     @Override
-    public void deleteAllNotification(Long customerId) {
-        userNotificationRepository.deleteAll(userNotificationRepository.findAllByCustomerId(customerId, Pageable.unpaged()));
-    }
-
-    @Override
-    public void deleteAllNotificationByStaff(Long staffId) {
-        userNotificationRepository.deleteAll(userNotificationRepository.findAllByStaffId(staffId, Pageable.unpaged()));
-    }
-
-    @Override
-    public void deleteAllNotificationByManager(Long managerId) {
-        userNotificationRepository.deleteAll(userNotificationRepository.findAllByManagerId(managerId, Pageable.unpaged()));
+    public void deleteAllNotification() {
+        User user = userService.getCurrentUser();
+        switch (user.getRole()) {
+            case CUSTOMER -> userNotificationRepository.deleteAllByCustomerId(user.getId());
+            case STAFF -> userNotificationRepository.deleteAllByStaffId(user.getId());
+            case MANAGER -> userNotificationRepository.deleteAllByManagerId(user.getId());
+        }
     }
 
     @Override
     public NotificationResponse convertToResponse(UserNotification userNotification) {
         NotificationResponse response = modelMapper.map(userNotification, NotificationResponse.class);
-        response.setType(userNotification.getNotification().getType());
         response.setTitle(userNotification.getNotification().getTitle());
         response.setContent(userNotification.getNotification().getContent());
         response.setSentAt(userNotification.getNotification().getSentAt());

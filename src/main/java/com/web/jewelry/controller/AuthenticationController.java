@@ -10,8 +10,8 @@ import com.web.jewelry.enums.EUserRole;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.User;
 import com.web.jewelry.service.authentication.AuthenticationService;
-import com.web.jewelry.service.authentication.EmailService;
 import com.web.jewelry.service.cart.ICartService;
+import com.web.jewelry.service.email.EmailQueueService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +33,7 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final IUserService userService;
     private final ICartService cartService;
-    private final EmailService emailService;
+    private final EmailQueueService emailQueueService;
     private final Map<String, String> verificationCodes = new HashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
 
@@ -72,8 +73,8 @@ public class AuthenticationController {
     @PostMapping("/send-email")
     public ResponseEntity<ApiResponse> sendEmail(@RequestBody Map<String, Object> request) {
         String email = (String) request.get("email");
-        String code = emailService.sendVerificationEmail(email);
-
+        String code = generateVerificationCode();
+        emailQueueService.enqueue(new EmailRequest(email, "Xác nhận đăng ký tài khoản", "Mã xác nhận của bạn là: " + code));
         long expiredAt = System.currentTimeMillis() + 60 * 1000;
         verificationCodes.put(email, code);
         scheduleCodeExpiration(email);
@@ -107,5 +108,16 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse> verifyResetPassword(@RequestBody ResetPasswordRequest request) {
         userService.resetPassword(request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    @PutMapping("/confirm-delete-my-account")
+    public ResponseEntity<ApiResponse> confirmDeleteCurrentCustomer(@RequestParam String token) {
+        userService.confirmDeleteCurrentCustomer(token);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
+    }
+
+    private String generateVerificationCode() {
+        Random random = new Random();
+        return String.format("%04d", random.nextInt(10000));
     }
 }

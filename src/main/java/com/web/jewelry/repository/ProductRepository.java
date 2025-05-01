@@ -1,6 +1,5 @@
 package com.web.jewelry.repository;
 
-import com.web.jewelry.dto.response.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,6 +33,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "AND p.status <> 'NOT_AVAILABLE'")
     Page<Product> findAllByCategoryId(Long categoryId, Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.title = :title AND p.status <> 'NOT_AVAILABLE'")
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p WHERE p.title = :title AND p.status <> 'NOT_AVAILABLE'")
     boolean existsByTitleAndAvailable(String title);
 }

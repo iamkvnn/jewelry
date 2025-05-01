@@ -1,6 +1,7 @@
 package com.web.jewelry.service.address;
 
 import com.web.jewelry.dto.request.AddressRequest;
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.response.AddressResponse;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.web.jewelry.model.Address;
 import com.web.jewelry.model.Customer;
 import com.web.jewelry.model.User;
 import com.web.jewelry.repository.AddressRepository;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,18 +20,31 @@ import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class AddressService implements IAddressService{
     private final AddressRepository addressRepository;
     private final IUserService userService;
+    private final INotificationService notificationService;
     private final ModelMapper modelMapper;
 
     @Override
     public Address addAddress(AddressRequest request) {
         Customer customer = (Customer) userService.getCurrentUser();
         boolean isDefault = !addressRepository.existsByCustomerId(customer.getId());
+        notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                .title("Bạn vừa thêm địa chỉ mới")
+                .content("Bạn vừa thêm địa chỉ: " + request.getRecipientName() + "\n" +
+                        "Số điện thoại: " + request.getRecipientPhone() + "\n" +
+                        "Địa chỉ: " + request.getAddress() + "\n" +
+                        "Tỉnh/Thành phố: " + request.getProvince() + "\n" +
+                        "Quận/Huyện: " + request.getDistrict() + "\n" +
+                        "Xã/Phường: " + request.getVillage())
+                .customerIds(Set.of(customer.getId()))
+                .build());
         return addressRepository.save(Address.builder()
                 .customer(customer)
                 .recipientName(request.getRecipientName())
@@ -53,7 +68,7 @@ public class AddressService implements IAddressService{
             address.setVillage(request.getVillage());
             address.setAddress(request.getAddress());
             return addressRepository.save(address);
-        }).orElseThrow(() -> new RuntimeException("Address not found"));
+        }).orElseThrow(() -> new ResourceNotFoundException("Address not found"));
     }
 
     @Transactional
@@ -94,6 +109,16 @@ public class AddressService implements IAddressService{
                 throw new BadRequestException("Cannot delete default address");
             }
             addressRepository.delete(address);
+            notificationService.sendNotificationToSpecificCustomer(NotificationRequest.builder()
+                    .title("Bạn vừa xóa một địa chỉ")
+                    .content("Bạn vừa xóa địa chỉ: " + address.getRecipientName() + "\n" +
+                            "Số điện thoại: " + address.getRecipientPhone() + "\n" +
+                            "Địa chỉ: " + address.getAddress() + "\n" +
+                            "Tỉnh/Thành phố: " + address.getProvince() + "\n" +
+                            "Quận/Huyện: " + address.getDistrict() + "\n" +
+                            "Xã/Phường: " + address.getVillage())
+                    .customerIds(Set.of(customerId))
+                    .build());
         }, () -> {
             throw new ResourceNotFoundException("Address not found");
         });
