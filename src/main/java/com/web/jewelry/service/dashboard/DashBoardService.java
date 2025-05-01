@@ -4,14 +4,13 @@ import com.web.jewelry.dto.response.*;
 import com.web.jewelry.model.Order;
 import com.web.jewelry.model.OrderItem;
 import com.web.jewelry.repository.*;
+import com.web.jewelry.service.address.AddressService;
+import com.web.jewelry.service.order.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -22,6 +21,8 @@ public class DashBoardService implements IDashboardService{
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final CollectionRepository collectionRepository;
+    private final OrderService orderService;
+    private final AddressService addressService;
 
     @Override
     public Long getTotalCustomers() {
@@ -97,6 +98,34 @@ public class DashBoardService implements IDashboardService{
     }
 
     @Override
+    public List<ProductSoldByCategoryResponse> getProductSoldByCategory(int month, int year) {
+        List<Order> orders = orderRepository.findByOrderDateBetween(
+                LocalDateTime.of(year, month, 1, 0, 0),
+                LocalDateTime.of(year + 1, month+1, 1, 0, 0)
+        );
+
+        Map<Long, ProductSoldByCategoryResponse> categoryProductMap = new HashMap<>();
+        categoryProductMap.putAll(categoryRepository.findAllWithoutParent().stream()
+                .map(category -> ProductSoldByCategoryResponse.builder()
+                        .categoryId(category.getId())
+                        .categoryName(category.getName())
+                        .totalSales(0L)
+                        .build())
+                .collect(Collectors.toMap(
+                        ProductSoldByCategoryResponse::getCategoryId,
+                        category -> category
+                ))
+        );
+        orders.stream().flatMap(order -> order.getOrderItems().stream())
+                .forEach(orderItem -> {
+                    Long quantity = orderItem.getQuantity();
+                    Long categoryId = orderItem.getProduct().getCategory().getParent().getId();
+                    categoryProductMap.get(categoryId).setTotalSales(categoryProductMap.get(categoryId).getTotalSales() + quantity);
+                });
+        return categoryProductMap.values().stream().toList();
+    }
+
+    @Override
     public List<TopSellingProductResponse> getTopSellingProducts(int month, int year, int limit) {
         return orderRepository.findByOrderDateBetween(
                     LocalDateTime.of(year, month, 1, 0, 0),
@@ -143,6 +172,30 @@ public class DashBoardService implements IDashboardService{
         return monthlyRevenueMap.values().stream()
                 .sorted(Comparator.comparing(MonthlyRevenueResponse::getMonth))
                 .toList();
+    }
+
+    @Override
+    public List<LatestOrderResponse> getLatestOrders(int month, int year, int limit) {
+        List<Order> orders = orderRepository.findByOrderDateBetween(
+                LocalDateTime.of(year, 1, 1, 0, 0),
+                LocalDateTime.of(year + 1, 1, 1, 0, 0)
+        ).stream().sorted(Comparator.comparing(Order::getOrderDate)).limit(limit).toList();
+        return  orders.stream().map(order -> LatestOrderResponse.builder()
+                .id(order.getId())
+                .totalProductPrice(order.getTotalProductPrice())
+                .shippingAddress(addressService.convertToResponse(order.getShippingAddress()))
+                .shippingMethod(order.getShippingMethod())
+                .shippingFee(order.getShippingFee())
+                .totalPrice(order.getTotalPrice())
+                .freeShipDiscount(order.getFreeShipDiscount())
+                .promotionDiscount(order.getPromotionDiscount())
+                .paymentMethod(order.getPaymentMethod())
+                .status(order.getStatus())
+                .note(order.getNote())
+                .orderDate(order.getOrderDate())
+                .isReviewed(order.isReviewed())
+                .build()
+                ).limit(limit).toList();
     }
 
     @Override
