@@ -113,7 +113,7 @@ public class UserService implements IUserService {
             case STAFF -> "nhân viên";
             case CUSTOMER -> "thành viên";
         };
-        emailQueueService.enqueue(new EmailRequest(email, "Xác nhận khôi phục mật khẩu tài khoản " + roleString + "tại Shiny", "Mã xác nhận của bạn là: " + code));
+        emailQueueService.enqueue(new EmailRequest(email, "Xác nhận khôi phục mật khẩu tài khoản " + roleString + " tại Shiny", "Mã xác nhận của bạn là: " + code));
         verificationCodes.put(user.getEmail() + user.getRole(), code);
         scheduleCodeExpiration(user.getEmail() + user.getRole());
     }
@@ -140,7 +140,7 @@ public class UserService implements IUserService {
                 throw new BadRequestException("Invalid verification code");
             }
         }
-        if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
+        else if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
             if (user.getBackupTokenExpireAt().isBefore(LocalDateTime.now()) || !user.getBackupToken().equals(request.getToken())) {
                 throw new BadRequestException("Invalid token");
             }

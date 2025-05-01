@@ -201,14 +201,16 @@ public class OrderService implements IOrderService {
     }
 
     private EMembershiprank calcRank(Long totalSpent) {
-        if (totalSpent < 1000000) {
+        if (totalSpent < 7000000) {
             return EMembershiprank.MEMBER;
-        } else if (totalSpent < 5000000) {
+        } else if (totalSpent < 15000000) {
             return EMembershiprank.SILVER;
-        } else if (totalSpent < 10000000) {
+        } else if (totalSpent < 30000000) {
             return EMembershiprank.GOLD;
-        } else {
+        } else if (totalSpent < 50000000) {
             return EMembershiprank.PLATINUM;
+        } else {
+            return EMembershiprank.DIAMOND;
         }
     }
 
