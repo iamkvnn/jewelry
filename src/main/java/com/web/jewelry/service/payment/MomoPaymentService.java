@@ -5,19 +5,16 @@ import com.nimbusds.jose.shaded.gson.JsonParser;
 import com.web.jewelry.config.MomoPaymentConfig;
 import com.web.jewelry.dto.request.MomoPaymentRequest;
 import com.web.jewelry.dto.request.NotificationRequest;
-import com.web.jewelry.dto.response.PaymentResponse;
 import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EPaymentStatus;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.MomoPayment;
 import com.web.jewelry.model.Order;
-import com.web.jewelry.model.Payment;
 import com.web.jewelry.repository.MomoPaymentRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -27,13 +24,13 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class MomoPaymentService implements IPaymentService {
+public class MomoPaymentService {
     private final IOrderService orderService;
     private final OrderRepository orderRepository;
     private final MomoPaymentRepository momoPaymentRepository;
     private final MomoPaymentConfig momoConfig;
     private final INotificationService notificationService;
-    private final ModelMapper modelMapper;
+    //private final ModelMapper modelMapper;
 
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         Order order = orderService.getOrder(orderId);
@@ -95,15 +92,5 @@ public class MomoPaymentService implements IPaymentService {
                                 .build());
             }
         }
-    }
-
-    @Override
-    public Payment createPayment(String orderId){
-        return null;
-    }
-
-    @Override
-    public PaymentResponse convertToResponse(Payment payment) {
-        return null;
     }
 }

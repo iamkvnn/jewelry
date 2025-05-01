@@ -20,6 +20,7 @@ public class OrderResponse {
     private Long freeShipDiscount;
     private Long promotionDiscount;
     private EPaymentMethod paymentMethod;
+    private PaymentResponse payment;
     private EOrderStatus status;
     private String note;
     private LocalDateTime orderDate;

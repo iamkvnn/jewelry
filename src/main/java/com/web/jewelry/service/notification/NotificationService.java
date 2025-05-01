@@ -34,6 +34,9 @@ public class NotificationService implements INotificationService {
     @Transactional
     @Override
     public void sendNotificationToSpecificCustomer(NotificationRequest request) {
+        if (request.getCustomerIds() == null || request.getCustomerIds().isEmpty()) {
+            return;
+        }
         Notification notification = notificationRepository.save(createBaseNotification(request));
         request.getCustomerIds().forEach(customerId -> {
             Customer customer = (Customer) userService.getCustomerById(customerId);

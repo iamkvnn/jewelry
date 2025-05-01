@@ -1,10 +1,7 @@
 package com.web.jewelry.controller;
 
 import com.web.jewelry.dto.response.ApiResponse;
-import com.web.jewelry.dto.response.PaymentResponse;
 import com.web.jewelry.dto.response.VNPayIPNResponse;
-import com.web.jewelry.model.Payment;
-import com.web.jewelry.service.payment.CODPaymentService;
 import com.web.jewelry.service.payment.MomoPaymentService;
 import com.web.jewelry.service.payment.VNPayPaymentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,17 +17,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("${api.prefix}/payments")
 public class PaymentController {
-    // XH moi doi thanh codPaymentService, chua test chay duoc ko
-    private final CODPaymentService codPaymentService;
     private final MomoPaymentService momoPaymentService;
     private final VNPayPaymentService vnPayPaymentService;
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse> createPayment(@RequestParam String orderId) {
-        Payment payment = codPaymentService.createPayment(orderId);
-        PaymentResponse paymentResponse = codPaymentService.convertToResponse(payment);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", paymentResponse));
-    }
     @PostMapping("/momo-payment")
     public ResponseEntity<ApiResponse> requestMomoPayment(@RequestParam String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         String response = momoPaymentService.getPaymentUrl(orderId);
