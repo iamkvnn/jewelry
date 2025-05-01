@@ -5,7 +5,6 @@ import com.web.jewelry.model.Order;
 import com.web.jewelry.model.OrderItem;
 import com.web.jewelry.repository.*;
 import com.web.jewelry.service.address.AddressService;
-import com.web.jewelry.service.order.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +20,6 @@ public class DashBoardService implements IDashboardService{
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final CollectionRepository collectionRepository;
-    private final OrderService orderService;
     private final AddressService addressService;
 
     @Override

@@ -58,7 +58,6 @@ public class AuthenticationController {
         request.setEmail(cus.getEmail());
         request.setRole(role);
         request.setLoginWithGoogle(true);
-        request.setRole(role);
         AuthenticationResponse response = authenticationService.authenticate(request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
