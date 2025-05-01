@@ -13,6 +13,7 @@ import com.web.jewelry.dto.request.IntrospectRequest;
 import com.web.jewelry.dto.response.AuthenticationResponse;
 import com.web.jewelry.dto.response.IntrospectResponse;
 import com.web.jewelry.dto.response.UserResponse;
+import com.web.jewelry.enums.EUserStatus;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Customer;
@@ -62,6 +63,12 @@ public class AuthenticationService {
             default -> null;
         };
         assert user != null;
+        if (user.getStatus() == EUserStatus.BANNED) {
+            throw new BadRequestException("Your account has been banned");
+        }
+        if (user.getStatus() == EUserStatus.REMOVED) {
+            throw new ResourceNotFoundException("User not found");
+        }
         if(!request.isLoginWithGoogle() && !passwordEncoder.matches(request.getPassword(), user.getPassword())){
             throw new BadRequestException("Invalid username or password");
         }

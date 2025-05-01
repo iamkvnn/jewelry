@@ -4,6 +4,7 @@ import com.nimbusds.jose.shaded.gson.JsonObject;
 import com.nimbusds.jose.shaded.gson.JsonParser;
 import com.web.jewelry.config.MomoPaymentConfig;
 import com.web.jewelry.dto.request.MomoPaymentRequest;
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.response.PaymentResponse;
 import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EPaymentStatus;
@@ -13,15 +14,16 @@ import com.web.jewelry.model.Order;
 import com.web.jewelry.model.Payment;
 import com.web.jewelry.repository.MomoPaymentRepository;
 import com.web.jewelry.repository.OrderRepository;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class MomoPaymentService implements IPaymentService {
     private final OrderRepository orderRepository;
     private final MomoPaymentRepository momoPaymentRepository;
     private final MomoPaymentConfig momoConfig;
+    private final INotificationService notificationService;
     private final ModelMapper modelMapper;
 
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
@@ -50,6 +53,9 @@ public class MomoPaymentService implements IPaymentService {
     }
 
     public void checkPayment(Map<String, Object> response){
+        Locale localeVN = Locale.forLanguageTag("vi-VN");
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
+        currencyFormatter.setCurrency(Currency.getInstance("VND"));
         if(Objects.equals(response.get("resultCode"), 0) && momoConfig.isValidSignature(response)){
             System.out.println("ORDER RESPONSE: " + response.get("orderId"));
             String orderId = response.get("orderId").toString();
@@ -70,6 +76,23 @@ public class MomoPaymentService implements IPaymentService {
                         .build();
                 System.out.println("MOMO PAYMENT: " + momoPayment);
                 momoPaymentRepository.save(momoPayment);
+                notificationService.sendNotificationToSpecificCustomer(
+                        NotificationRequest.builder()
+                                .title("Thông báo đơn hàng")
+                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.")
+                                .customerIds(Set.of(order.getCustomer().getId()))
+                                .isEmail(true)
+                                .build());
+                notificationService.sendNotificationToAllStaff(
+                        NotificationRequest.builder()
+                                .title("Thông báo có đơn hàng mới")
+                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.\n Vui lòng kiểm tra.")
+                                .build());
+                notificationService.sendNotificationToAllManager(
+                        NotificationRequest.builder()
+                                .title("Vừa có đơn hàng mới được tạo")
+                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.")
+                                .build());
             }
         }
     }

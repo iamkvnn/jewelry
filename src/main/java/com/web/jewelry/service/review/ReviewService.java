@@ -1,5 +1,6 @@
 package com.web.jewelry.service.review;
 
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.request.ReviewRequest;
 import com.web.jewelry.dto.response.ReviewResponse;
 import com.web.jewelry.enums.EOrderStatus;
@@ -9,6 +10,7 @@ import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.*;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.ReviewRepository;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import com.web.jewelry.service.product.IProductService;
 import com.web.jewelry.service.user.IUserService;
@@ -34,6 +36,7 @@ public class ReviewService implements IReviewService {
     private final IProductService productService;
     private final IOrderService orderService;
     private final OrderRepository orderRepository;
+    private final INotificationService notificationService;
 
     private final ModelMapper modelMapper;
 
@@ -85,6 +88,10 @@ public class ReviewService implements IReviewService {
         reviewRepository.saveAll(reviews);
         order.setReviewed(true);
         orderRepository.save(order);
+        notificationService.sendNotificationToAllStaff(NotificationRequest.builder()
+                .title("Có đánh giá mới")
+                .content("Khách hàng " + customer.getFullName() + " đã đánh giá các sản phẩm trong đơn hàng " + order.getId() + " của họ")
+                .build());
     }
 
     @Override

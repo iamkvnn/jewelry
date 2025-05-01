@@ -1,6 +1,5 @@
 package com.web.jewelry.model;
 
-import com.web.jewelry.enums.ENotificationType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,8 +19,6 @@ public class Notification {
     private String title;
     private String content;
     private LocalDateTime sentAt;
-    @Enumerated(EnumType.STRING)
-    private ENotificationType type;
 
     @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserNotification> userNotifications;

@@ -2,6 +2,7 @@ package com.web.jewelry.service.order;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.ReturnItemRequest;
 import com.web.jewelry.dto.request.ReturnOrderRequest;
@@ -18,6 +19,7 @@ import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
+import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import com.web.jewelry.service.user.IUserService;
 import com.web.jewelry.service.voucher.IVoucherService;
@@ -48,6 +50,7 @@ public class OrderService implements IOrderService {
     private final IAddressService addressService;
     private final ICartService cartService;
     private final IUserService userService;
+    private final INotificationService notificationService;
     private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
@@ -149,6 +152,7 @@ public class OrderService implements IOrderService {
                     }
                     size.setStock(size.getStock() - cartItem.getQuantity());
                     size.setSold(size.getSold() + cartItem.getQuantity());
+                    productSizeMap.put(sizeId, size);
                     return OrderItem.builder()
                             .order(order)
                             .productSize(size)
@@ -160,14 +164,15 @@ public class OrderService implements IOrderService {
                             .build();
                 })
                 .toList();
-        productSizeService.updateStockAndSold(productSizes);
+        productSizeService.updateStockAndSold(productSizeMap.values().stream().toList());
         cartService.removeItemsFromCart(productSizeIds);
         return items;
     }
 
     @Override
-    public Page<Order> getOrders(Long page, Long size) {
-        return orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()));
+    public Page<Order> getOrders(EOrderStatus status, Long page, Long size) {
+        return status == null ? orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()))
+                : orderRepository.findByStatus(status, PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
     @Override
@@ -176,9 +181,10 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public Page<Order> getMyOrders(Long page, Long size) {
+    public Page<Order> getMyOrders(EOrderStatus status, Long page, Long size) {
         Long customerId = userService.getCurrentUser().getId();
-        return orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()));
+        return status == null ? orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()))
+                : orderRepository.findByCustomerIdAndStatus(customerId, status, PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
     @Override
@@ -257,7 +263,6 @@ public class OrderService implements IOrderService {
                     if (orderItem.getQuantity() < returnItem.getQuantity()) {
                         throw new BadRequestException("Return quantity for item " + orderItem.getId() + " cannot be greater than order quantity");
                     }
-
                     returnItemRepository.save(ReturnItem.builder()
                             .quantity(returnItem.getQuantity())
                             .reason(returnItem.getReturnReason())
@@ -267,6 +272,15 @@ public class OrderService implements IOrderService {
                 });
         order.setStatus(EOrderStatus.RETURN_REQUESTED);
         orderRepository.save(order);
+        notificationService.sendNotificationToAllStaff(NotificationRequest.builder()
+                .title("Có yêu cầu trả hàng mới!")
+                .content("Khách hàng " + order.getCustomer().getFullName() + " đã gửi một yêu cầu trả hàng với đơn hàng " + order.getId() +
+                        ".\n Vui lòng kiểm tra lại đơn hàng và xác nhận yêu cầu trả hàng.")
+                .build());
+        notificationService.sendNotificationToAllManager(NotificationRequest.builder()
+                .title("Có yêu cầu trả hàng mới!")
+                .content("Khách hàng " + order.getCustomer().getFullName() + " đã gửi một yêu cầu trả hàng với đơn hàng " + order.getId())
+                .build());
     }
 
     private Map<String, Object> getBody(String district, String province, EShippingMethod method) {

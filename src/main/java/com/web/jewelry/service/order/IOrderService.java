@@ -11,9 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface IOrderService {
     Order placeOrder(OrderRequest orderRequest);
-    Page<Order> getOrders(Long page, Long size);
+    Page<Order> getOrders(EOrderStatus status, Long page, Long size);
     Order getOrder(String orderId);
-    Page<Order> getMyOrders(Long page, Long size);
+    Page<Order> getMyOrders(EOrderStatus status, Long page, Long size);
     Order updateOrderStatus(String orderId, EOrderStatus status);
     Long getEstimateShippingFee(String district, String province, EShippingMethod method);
 

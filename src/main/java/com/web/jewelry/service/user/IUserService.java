@@ -11,10 +11,14 @@ import com.web.jewelry.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Set;
+
 public interface IUserService {
     Page<Staff> getAllStaff(Pageable pageable);
     Page<Customer> getAllCustomers(Pageable pageable);
     Page<Manager> getAllManagers(Pageable pageable);
+
+    Set<Long> getAllUerRegisteredForNews();
 
     Page<Customer> findCustomerByName(String name, Pageable pageable);
     Page<Staff> findStaffByName(String name, Pageable pageable);
@@ -29,7 +33,6 @@ public interface IUserService {
 
     User updateStaff(UserRequest request, Long id);
 
-    User getManagerById(Long id);
     User getStaffById(Long id);
     User getCustomerById(Long id);
 
@@ -46,8 +49,10 @@ public interface IUserService {
 
     User getCurrentUser();
     User updateCurrentUser(UserRequest request);
-    void deleteCurrentCustomer();
+    void sendRequestDeleteCurrentCustomer();
 
     <T> UserResponse convertToUserResponse(T user);
     <T> Page<UserResponse> convertToUserResponse(Page<T> users);
+
+    void confirmDeleteCurrentCustomer(String token);
 }

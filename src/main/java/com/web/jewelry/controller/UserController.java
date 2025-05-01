@@ -75,9 +75,9 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
-    @DeleteMapping("/customer/delete-my-account")
+    @PostMapping("/customer/delete-my-account")
     public ResponseEntity<ApiResponse> deleteCurrentCustomer() {
-        userService.deleteCurrentCustomer();
+        userService.sendRequestDeleteCurrentCustomer();
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 

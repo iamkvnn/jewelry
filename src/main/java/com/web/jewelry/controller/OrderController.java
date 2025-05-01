@@ -33,8 +33,8 @@ public class OrderController {
     }
 
     @GetMapping("/my-orders")
-    public ResponseEntity<ApiResponse> getCustomerOrders(@RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
-        Page<Order> orders = orderService.getMyOrders(page, size);
+    public ResponseEntity<ApiResponse> getCustomerOrders(@RequestParam(required = false) EOrderStatus status, @RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
+        Page<Order> orders = orderService.getMyOrders(status, page, size);
         Page<OrderResponse> orderResponses = orderService.convertToResponse(orders);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponses));
     }
@@ -46,8 +46,8 @@ public class OrderController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<ApiResponse> getOrders(@RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
-        Page<Order> orders = orderService.getOrders(page, size);
+    public ResponseEntity<ApiResponse> getOrders(@RequestParam(required = false) EOrderStatus status, @RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
+        Page<Order> orders = orderService.getOrders(status, page, size);
         Page<OrderResponse> orderResponses = orderService.convertToResponse(orders);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponses));
     }
