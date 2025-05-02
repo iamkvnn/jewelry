@@ -11,7 +11,7 @@ public interface ICartService {
     Cart getMyCart();
     void clearMyCart();
     void initializeNewCart(Customer customer);
-    public void addItemToCart(Long productSizeId, Long quantity);
+    void addItemToCart(Long productSizeId, Long quantity);
     void removeItemFromCart(Long productSizeId);
     void removeItemsFromCart(List<Long> productSizeIds);
     void updateItemQuantity(Long productSizeId, Long quantity);

@@ -26,19 +26,21 @@ public class ProductController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 
-    @PreAuthorize("hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasRole('MANAGER')")
     @PostMapping("/add")
     ResponseEntity<ApiResponse> addProduct(@RequestBody ProductRequest request) {
         ProductResponse product = productService.addProduct(request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/product/{id}")
     ResponseEntity<ApiResponse> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
         ProductResponse product = productService.updateProduct(id, request);
         return ResponseEntity.ok(new ApiResponse("200", "Success", product));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/product/{id}")
     ResponseEntity<ApiResponse> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

@@ -6,6 +6,7 @@ import com.web.jewelry.model.Image;
 import com.web.jewelry.service.image.IImageService;
 import com.web.jewelry.service.image.ProductImageService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,12 +28,14 @@ public class ProductImageController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", imageResponse));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse> uploadImage(@RequestParam Long productId, @RequestParam List<MultipartFile> files) {
         List<ImageResponse> images = imageService.addImage(productId, files);
         return ResponseEntity.ok(new ApiResponse("200", "Success", images));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteImage(@PathVariable Long id) {
         imageService.deleteImage(id);

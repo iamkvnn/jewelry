@@ -4,11 +4,11 @@ import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.VoucherRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.VoucherResponse;
-import com.web.jewelry.enums.EVoucherType;
 import com.web.jewelry.model.Voucher;
 import com.web.jewelry.service.voucher.IVoucherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,16 +37,10 @@ public class VoucherController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
-    @GetMapping("/type")
-    public ResponseEntity<ApiResponse> getVoucherByType(@RequestParam EVoucherType type) {
-        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getVoucherByType(type));
+    @GetMapping("/valid-for-order")
+    public ResponseEntity<ApiResponse> getValidVouchersForOrder(@RequestBody OrderRequest request) {
+        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchersForOrder(request));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
-    }
-
-    @GetMapping("/code")
-    public ResponseEntity<ApiResponse> getVoucherByCode(@RequestParam String code) {
-        VoucherResponse voucher = voucherService.convertToResponse(voucherService.getVoucherByCode(code));
-        return ResponseEntity.ok(new ApiResponse("200", "Success", voucher));
     }
 
     @GetMapping("/{id}")
@@ -62,23 +56,24 @@ public class VoucherController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PostMapping("/add")
     public ResponseEntity<ApiResponse> addVoucher(@RequestBody VoucherRequest request) {
         VoucherResponse voucher = voucherService.convertToResponse(voucherService.addVoucher(request));
         return ResponseEntity.ok(new ApiResponse("200", "Success", voucher));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse> updateVoucher(@PathVariable Long id, @RequestBody VoucherRequest request) {
         VoucherResponse voucher = voucherService.convertToResponse(voucherService.updateVoucher(id, request));
         return ResponseEntity.ok(new ApiResponse("200", "Success", voucher));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteVoucher(@PathVariable Long id) {
         voucherService.deleteVoucher(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
-
-
 }

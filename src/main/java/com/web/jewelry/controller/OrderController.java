@@ -12,6 +12,8 @@ import com.web.jewelry.service.image.ProofImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.web.jewelry.service.order.IOrderService;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,6 +47,7 @@ public class OrderController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", fee));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/all")
     public ResponseEntity<ApiResponse> getOrders(@RequestParam(required = false) EOrderStatus status, @RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
         Page<Order> orders = orderService.getOrders(status, page, size);

@@ -53,11 +53,6 @@ public class Order {
     @JoinColumn(name = "address_id")
     private Address shippingAddress;
 
-    @ManyToMany
-    @JoinTable(
-            name = "order_vouchers",
-            joinColumns = @JoinColumn(name = "order_id"),
-            inverseJoinColumns = @JoinColumn(name = "voucher_id")
-    )
-    private List<Voucher> vouchers;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderVoucher> vouchers;
 }
