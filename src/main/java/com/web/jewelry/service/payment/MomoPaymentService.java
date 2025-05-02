@@ -13,7 +13,6 @@ import com.web.jewelry.model.Order;
 import com.web.jewelry.repository.MomoPaymentRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.notification.INotificationService;
-import com.web.jewelry.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MomoPaymentService {
-    private final IOrderService orderService;
     private final OrderRepository orderRepository;
     private final MomoPaymentRepository momoPaymentRepository;
     private final MomoPaymentConfig momoConfig;
@@ -36,8 +34,19 @@ public class MomoPaymentService {
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
+    public MomoPayment createPayment(Order order) {
+        MomoPayment payment = MomoPayment.builder()
+                .order(order)
+                .amount(order.getTotalPrice())
+                .paymentMessage("Thanh toán đơn hàng " + order.getId())
+                .paymentInfo("Thanh toán khi nhận hàng")
+                .status(EPaymentStatus.PROCESSING)
+                .build();
+        return momoPaymentRepository.save(payment);
+    }
+
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
-        Order order = orderService.getOrder(orderId);
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)){
             String returnUrl = feBaseUrl + "checkouts/thank-you?orderId=" + orderId;
             String notifyUrl = "https://ae92-14-169-5-215.ngrok-free.app/api/v1/payments/momo-callback";
@@ -58,24 +67,16 @@ public class MomoPaymentService {
         NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
         currencyFormatter.setCurrency(Currency.getInstance("VND"));
         if(Objects.equals(response.get("resultCode"), 0) && momoConfig.isValidSignature(response)){
-            System.out.println("ORDER RESPONSE: " + response.get("orderId"));
             String orderId = response.get("orderId").toString();
             Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-            System.out.println("ORDER RESPONSE............");
             if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)  && response.get("amount") != null
                     && (order.getTotalPrice() <= Long.parseLong(response.get("amount").toString()))){
-                MomoPayment momoPayment = MomoPayment.builder()
-                        .order(order)
-                        .requestId(response.get("requestId").toString())
-                        .paymentInfo(response.get("orderInfo").toString())
-                        .paymentMessage(response.get("message").toString())
-                        .amount(Long.parseLong(response.get("amount").toString()))
-                        .paymentDate(LocalDateTime.now())
-                        .transactionId(Long.parseLong(response.get("transId").toString()))
-                        .resultCode(Integer.parseInt(response.get("resultCode").toString()))
-                        .status(EPaymentStatus.PAID)
-                        .build();
-                System.out.println("MOMO PAYMENT: " + momoPayment);
+                MomoPayment momoPayment = momoPaymentRepository.findByOrderId(orderId).orElseThrow(() -> new ResourceNotFoundException("Momo payment not found"));
+                momoPayment.setStatus(EPaymentStatus.PAID);
+                momoPayment.setPaymentDate(LocalDateTime.now());
+                momoPayment.setRequestId(response.get("requestId").toString());
+                momoPayment.setTransactionId(Long.parseLong(response.get("transactionId").toString()));
+                momoPayment.setResultCode(Integer.parseInt(response.get("resultCode").toString()));
                 momoPaymentRepository.save(momoPayment);
                 notificationService.sendNotificationToSpecificCustomer(
                         NotificationRequest.builder()

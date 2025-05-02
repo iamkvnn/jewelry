@@ -3,11 +3,12 @@ package com.web.jewelry.service.payment;
 import com.web.jewelry.config.VNPayPaymentConfig;
 import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.enums.EPaymentStatus;
+import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Order;
 import com.web.jewelry.model.VNPayPayment;
+import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.VNPayPaymentRepository;
 import com.web.jewelry.service.notification.INotificationService;
-import com.web.jewelry.service.order.IOrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +26,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Service
 public class VNPayPaymentService{
-    private final IOrderService orderService;
+    private final OrderRepository orderRepository;
     private final VNPayPaymentRepository vnPayPaymentRepository;
     private final VNPayPaymentConfig vnPayConfig;
     private final INotificationService notificationService;
@@ -42,8 +43,19 @@ public class VNPayPaymentService{
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
+    public VNPayPayment createPayment(Order order) {
+        VNPayPayment payment = VNPayPayment.builder()
+                .order(order)
+                .amount(order.getTotalPrice())
+                .paymentMessage("Thanh toán đơn hàng " + order.getId())
+                .paymentInfo("Thanh toán khi nhận hàng")
+                .status(EPaymentStatus.PROCESSING)
+                .build();
+        return vnPayPaymentRepository.save(payment);
+    }
+
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
-        Order order = orderService.getOrder(orderId);
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String vnp_TxnRef = vnPayConfig.getRandomNumber(8);
         long vnp_Amount = order.getTotalPrice() * 100;
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
@@ -117,19 +129,14 @@ public class VNPayPaymentService{
         String signValue = vnPayConfig.hashAllFields(fields);
         if (signValue.equals(vnp_SecureHash) && request.getParameter("vnp_ResponseCode").equals("00")) {
             String orderId = request.getParameter("vnp_OrderInfo").substring(20);
-            Order order = orderService.getOrder(orderId);
-            vnPayPaymentRepository.save(VNPayPayment.builder()
-                    .order(order)
-                    .paymentInfo(request.getParameter("vnp_OrderInfo"))
-                    .paymentMessage("Thành công")
-                    .status(EPaymentStatus.PAID)
-                    .amount(Long.parseLong(request.getParameter("vnp_Amount")) / 100)
-                    .bank(request.getParameter("vnp_BankCode"))
-                    .vnPayResponseCode(request.getParameter("vnp_ResponseCode"))
-                    .paymentDate(LocalDateTime.now())
-                    .transactionNumber(request.getParameter("vnp_TransactionNo"))
-                    .build()
-            );
+            Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+            VNPayPayment payment = vnPayPaymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+            payment.setTransactionNumber(request.getParameter("vnp_TransactionNo"));
+            payment.setBank(request.getParameter("vnp_BankCode"));
+            payment.setVnPayResponseCode(request.getParameter("vnp_ResponseCode"));
+            payment.setPaymentDate(LocalDateTime.now());
+            payment.setStatus(EPaymentStatus.PAID);
+            vnPayPaymentRepository.save(payment);
             notificationService.sendNotificationToSpecificCustomer(
                     NotificationRequest.builder()
                             .title("Thông báo đơn hàng")

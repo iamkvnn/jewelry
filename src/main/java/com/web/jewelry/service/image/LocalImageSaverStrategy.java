@@ -39,7 +39,7 @@ public class LocalImageSaverStrategy implements IImageSaverStrategy{
     @Override
     public void deleteImage(String publicId) {
         File folder = new File(uploadDir);
-        File[] matchingFiles = folder.listFiles((_, name) -> name.startsWith(publicId));
+        File[] matchingFiles = folder.listFiles((a, name) -> name.startsWith(publicId));
 
         if (matchingFiles != null && matchingFiles.length == 1) {
             boolean r = matchingFiles[0].delete();
