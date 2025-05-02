@@ -18,6 +18,8 @@ import com.web.jewelry.service.address.IAddressService;
 import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.payment.CODPaymentService;
+import com.web.jewelry.service.payment.MomoPaymentService;
+import com.web.jewelry.service.payment.VNPayPaymentService;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import com.web.jewelry.service.user.IUserService;
 import com.web.jewelry.service.voucher.IVoucherService;
@@ -50,6 +52,8 @@ public class OrderService implements IOrderService {
     private final IUserService userService;
     private final INotificationService notificationService;
     private final CODPaymentService codPaymentService;
+    private final MomoPaymentService momoPaymentService;
+    private final VNPayPaymentService vnPayPaymentService;
     private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
@@ -81,6 +85,11 @@ public class OrderService implements IOrderService {
         Order newOrder = orderRepository.save(order);
         if (newOrder.getPaymentMethod() == EPaymentMethod.COD) {
             newOrder.setCodPayment(codPaymentService.createPayment(order));
+        }
+        else if (newOrder.getPaymentMethod() == EPaymentMethod.MOMO) {
+            newOrder.setMomoPayment(momoPaymentService.createPayment(order));
+        } else if (newOrder.getPaymentMethod() == EPaymentMethod.VN_PAY) {
+            newOrder.setVnPayPayment(vnPayPaymentService.createPayment(order));
         }
         return newOrder;
     }
