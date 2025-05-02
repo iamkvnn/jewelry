@@ -31,4 +31,7 @@ public class Voucher {
 
     @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL)
     private List<VoucherApplicability> voucherApplicabilities;
+
+    @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL)
+    private List<OrderVoucher> orders;
 }

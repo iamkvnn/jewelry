@@ -56,11 +56,6 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
-    public List<Voucher> getVoucherByType(EVoucherType type) {
-        return voucherRepository.findByType(type);
-    }
-
-    @Override
     public List<Voucher> getValidVouchers() {
         return voucherRepository.findByValidFromBeforeAndValidToAfter(LocalDateTime.now(), LocalDateTime.now());
     }
@@ -175,6 +170,10 @@ public class VoucherService implements IVoucherService {
         voucherRepository.delete(voucher);
     }
 
+    @Override
+    public Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId) {
+        return voucherRepository.countUsedByVoucherCodeAndCustomerId(code, customerId);
+    }
 
     @Override
     public List<Voucher> validateVouchers(OrderRequest request) {
@@ -193,6 +192,7 @@ public class VoucherService implements IVoucherService {
                 promotionCount++;
             }
         }
+
         if (freeShipCount > 1) {
             throw new BadRequestException("An order can have only one 'FREESHIP' voucher.");
         }
@@ -205,6 +205,7 @@ public class VoucherService implements IVoucherService {
                 throw new BadRequestException("Minimum order value is not met");
             }
             voucher.getVoucherApplicabilities().stream().filter(voucherApplicability -> switch (voucherApplicability.getType()) {
+                case ALL -> true;
                 case PRODUCT -> request.getCartItems().stream().map(
                         cartItem -> cartItem.getProduct().getId()
                 ).toList().contains(voucherApplicability.getApplicableObjectId());
@@ -227,6 +228,9 @@ public class VoucherService implements IVoucherService {
         if (voucher.getValidTo().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Voucher is expired");
         }
+        if (voucher.getQuantity() <= 0) {
+            throw new BadRequestException("Voucher is out of stock");
+        }
     }
 
     @Override
@@ -237,5 +241,22 @@ public class VoucherService implements IVoucherService {
     @Override
     public List<VoucherResponse> convertToResponse(List<Voucher> vouchers) {
         return vouchers.stream().map(this::convertToResponse).toList();
+    }
+
+    @Override
+    public List<Voucher> getValidVouchersForOrder(OrderRequest request) {
+        Long customerId = userService.getCurrentUser().getId();
+        Long totalProductPrice = request.getTotalProductPrice();
+        return voucherRepository.findValidVoucherForOrder(LocalDateTime.now(), totalProductPrice, customerId);
+    }
+
+    @Override
+    public void decreaseVoucherQuantity(Long id) {
+        Voucher voucher = getVoucherById(id);
+        if (voucher.getQuantity() <= 0) {
+            throw new BadRequestException("Voucher is out of stock");
+        }
+        voucher.setQuantity(voucher.getQuantity() - 1);
+        voucherRepository.save(voucher);
     }
 }

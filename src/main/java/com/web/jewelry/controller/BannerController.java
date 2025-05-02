@@ -6,6 +6,7 @@ import com.web.jewelry.model.BannerImage;
 import com.web.jewelry.service.image.BannerImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class BannerController {
     private final BannerImageService imageService;
 
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/all")
     public ResponseEntity<ApiResponse> getAllBanners() {
         List<BannerImage> banners = imageService.getAllImages();
@@ -24,6 +26,7 @@ public class BannerController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getBannerById(@PathVariable Long id) {
         BannerImage banner = imageService.getImageById(id);
@@ -31,6 +34,7 @@ public class BannerController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse> updateBanner(@PathVariable Long id, @RequestParam MultipartFile file) {
         BannerImageResponse response = imageService.updateImage(id, file);

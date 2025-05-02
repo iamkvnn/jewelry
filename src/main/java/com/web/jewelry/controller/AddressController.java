@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AddressController {
     private final IAddressService addressService;
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getAddressById(@PathVariable Long id) {
         Address address = addressService.getAddressById(id);
@@ -49,12 +50,14 @@ public class AddressController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", addressResponse));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PutMapping("/setDefault/{addressId}")
     public ResponseEntity<ApiResponse> setDefaultAddress(@PathVariable Long addressId) {
         addressService.setDefaultAddress(addressId);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<ApiResponse> deleteAddress(@PathVariable Long id) {
         addressService.deleteAddress(id);

@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,10 +82,14 @@ public class AddressService implements IAddressService{
         });
     }
 
-    @PostAuthorize("returnObject.customer.email == authentication.name")
     @Override
     public Address getAddressById(Long id) {
-        return addressRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        Address address = addressRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        User user = userService.getCurrentUser();
+        if (!address.getCustomer().getId().equals(user.getId())) {
+            throw new ResourceNotFoundException("Address not found");
+        }
+        return address;
     }
 
     @Override

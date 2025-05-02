@@ -4,5 +4,6 @@ public enum EVoucherApplicabilityType {
     PRODUCT,
     CATEGORY,
     COLLECTION,
-    CUSTOMER
+    CUSTOMER,
+    ALL
 }

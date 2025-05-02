@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -54,6 +55,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PostMapping("/add-staff")
     public ResponseEntity<ApiResponse> addStaff(@RequestBody UserRequest request) {
         User user = userService.createStaff(request);
@@ -62,12 +64,13 @@ public class UserController {
     }
 
     @PutMapping("/update")
-    public ResponseEntity<ApiResponse> updateCustomer(@RequestBody UserRequest request) {
+    public ResponseEntity<ApiResponse> updateCurrentUser(@RequestBody UserRequest request) {
         User user = userService.updateCurrentUser(request);
         UserResponse response = userService.convertToUserResponse(user);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/update-staff/{id}")
     public ResponseEntity<ApiResponse> updateStaff(@PathVariable Long id, @RequestBody UserRequest request) {
         User user = userService.updateStaff(request, id);
@@ -81,30 +84,35 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/delete-staff/{id}")
     public ResponseEntity<ApiResponse> deleteStaff(@PathVariable Long id) {
         userService.deleteStaff(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/deactivate-staff/{id}")
     public ResponseEntity<ApiResponse> deactivateStaff(@PathVariable Long id) {
         userService.deactivateStaff(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/activate-staff/{id}")
     public ResponseEntity<ApiResponse> activateStaff(@PathVariable Long id) {
         userService.activateStaff(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/deactivate-customer/{id}")
     public ResponseEntity<ApiResponse> deactivateCustomer(@PathVariable Long id) {
         userService.deactivateCustomer(id);
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/activate-customer/{id}")
     public ResponseEntity<ApiResponse> activateCustomer(@PathVariable Long id) {
         userService.activateCustomer(id);
@@ -117,6 +125,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/search-customers")
     public ResponseEntity<ApiResponse> searchCustomers(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
         Page<Customer> customers = userService.findCustomerByName(name, PageRequest.of(page-1, size));
@@ -124,6 +133,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/search-staffs")
     public ResponseEntity<ApiResponse> searchStaffs(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
         Page<Staff> staffs = userService.findStaffByName(name, PageRequest.of(page-1, size));

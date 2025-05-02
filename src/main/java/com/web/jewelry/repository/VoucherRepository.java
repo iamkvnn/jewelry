@@ -1,6 +1,5 @@
 package com.web.jewelry.repository;
 
-import com.web.jewelry.enums.EVoucherType;
 import com.web.jewelry.model.Voucher;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,10 +12,23 @@ import java.util.Optional;
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     boolean existsByCode(String code);
     Optional<Voucher> findByCode(String code);
-    List<Voucher> findByType(EVoucherType type);
     List<Voucher> findByValidFromBeforeAndValidToAfter(LocalDateTime validFrom, LocalDateTime validTo);
 
     @Query("SELECT v FROM Voucher v WHERE LOWER(CONCAT(v.code, ' ', v.name)) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Voucher> searchByCodeOrName(@Param("query") String query);
 
+    @Query("SELECT COUNT(v) FROM Voucher v JOIN v.orders o WHERE v.code = :code AND o.customerId = :customerId")
+    Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId);
+
+    @Query("""
+    SELECT v
+    FROM Voucher v
+    WHERE :now BETWEEN v.validFrom AND v.validTo
+      AND (:totalPrice >= v.minimumToApply OR v.minimumToApply IS NULL)
+      AND (SELECT COUNT(ov)
+           FROM OrderVoucher ov
+           WHERE ov.voucher.id = v.id AND ov.customerId = :customerId) < v.limitUsePerCustomer
+      AND v.quantity > 0
+    """)
+    List<Voucher> findValidVoucherForOrder(LocalDateTime now, Long totalPrice, Long customerId);
 }

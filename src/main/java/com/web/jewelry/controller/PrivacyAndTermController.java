@@ -7,6 +7,7 @@ import com.web.jewelry.model.PrivacyAndTerm;
 import com.web.jewelry.service.privacy.IPrivacyAndTermService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
@@ -22,6 +23,7 @@ public class PrivacyAndTermController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/update")
     public ResponseEntity<ApiResponse> update(@RequestBody PrivacyAndTermRequest request) {
         PrivacyAndTerm privacyAndTerm = privacyAndTermService.update(request);

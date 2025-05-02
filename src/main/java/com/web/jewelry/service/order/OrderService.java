@@ -68,8 +68,16 @@ public class OrderService implements IOrderService {
         Address address = addressService.getAddressById(orderRequest.getShippingAddress().getId());
         Order order = initializeOrder(orderRequest, cart, address);
         List<OrderItem> orderItems = createOrderItems(order, cart, orderRequest);
-        validateOrder(orderRequest, orderItems);
+        List<Voucher> vouchers = validateVouchers(order.getCustomer().getId(), orderRequest);
+        validateOrder(orderRequest, orderItems, vouchers);
         order.setOrderItems(orderItems);
+        order.setVouchers(vouchers.stream()
+                .map(voucher -> OrderVoucher.builder()
+                        .order(order)
+                        .voucher(voucher)
+                        .customerId(order.getCustomer().getId())
+                        .build())
+                .toList());
         Order newOrder = orderRepository.save(order);
         if (newOrder.getPaymentMethod() == EPaymentMethod.COD) {
             newOrder.setCodPayment(codPaymentService.createPayment(order));
@@ -77,14 +85,25 @@ public class OrderService implements IOrderService {
         return newOrder;
     }
 
-    private void validateOrder(OrderRequest orderRequest, List<OrderItem> orderItems) {
+    private List<Voucher> validateVouchers(Long customerId, OrderRequest orderRequest) {
+        List<Voucher> vouchers = voucherService.validateVouchers(orderRequest);
+        vouchers.forEach(voucher -> {
+                        Long used = voucherService.countUsedByVoucherCodeAndCustomerId(voucher.getCode(), customerId);
+                        if (used >= voucher.getLimitUsePerCustomer()) {
+                            throw new BadRequestException("Voucher " + voucher.getCode() + " has been used up");
+                        }
+                        voucherService.decreaseVoucherQuantity(voucher.getId());
+                });
+        return vouchers;
+    }
+
+    private void validateOrder(OrderRequest orderRequest, List<OrderItem> orderItems, List<Voucher> vouchers) {
         Long total = orderItems.stream()
                 .map(OrderItem::getTotalPrice)
                 .reduce(0L, Long::sum);
         if (!total.equals(orderRequest.getTotalProductPrice())) {
             throw new BadRequestException("Total product price is not correct");
         }
-        List<Voucher> vouchers = voucherService.validateVouchers(orderRequest);
         vouchers.forEach(voucher -> {
             if (voucher.getType() == EVoucherType.FREESHIP) {
                 Long discount = voucher.getDiscountRate() * orderRequest.getShippingFee() > voucher.getApplyLimit() ?
@@ -174,20 +193,31 @@ public class OrderService implements IOrderService {
 
     @Override
     public Page<Order> getOrders(EOrderStatus status, Long page, Long size) {
-        return status == null ? orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()))
-                : orderRepository.findByStatus(status, PageRequest.of(page.intValue() - 1, size.intValue()));
+        if (status == null) {
+            return orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()));
+        } else {
+            return orderRepository.findByStatus(status, PageRequest.of(page.intValue() - 1, size.intValue()));
+        }
     }
 
     @Override
     public Order getOrder(String orderId) {
-        return orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        User user = userService.getCurrentUser();
+        if (!Objects.equals(order.getCustomer().getId(), user.getId()) && !user.getRole().equals(EUserRole.STAFF)) {
+            throw new ResourceNotFoundException("Order not found");
+        }
+        return order;
     }
 
     @Override
     public Page<Order> getMyOrders(EOrderStatus status, Long page, Long size) {
         Long customerId = userService.getCurrentUser().getId();
-        return status == null ? orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()))
-                : orderRepository.findByCustomerIdAndStatus(customerId, status, PageRequest.of(page.intValue() - 1, size.intValue()));
+        if (status == null) {
+            return orderRepository.findByCustomerId(customerId, PageRequest.of(page.intValue() - 1, size.intValue()));
+        } else {
+            return orderRepository.findByCustomerIdAndStatus(customerId, status, PageRequest.of(page.intValue() - 1, size.intValue()));
+        }
     }
 
     @Override

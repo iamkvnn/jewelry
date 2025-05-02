@@ -39,6 +39,8 @@ public class VNPayPaymentService{
     private String vnp_TmnCode;
     @Value("${VNPay.vnp_Url}")
     private String vnp_Url;
+    @Value("${FE_BASE_URL}")
+    private String feBaseUrl;
 
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         Order order = orderService.getOrder(orderId);
@@ -62,7 +64,7 @@ public class VNPayPaymentService{
         params.put("vnp_OrderInfo", "Thanh toan don hang " + orderId);
         String orderType = "other";
         params.put("vnp_OrderType", orderType);
-        params.put("vnp_ReturnUrl", "https://google.com");
+        params.put("vnp_ReturnUrl", feBaseUrl + "checkouts/thank-you?orderId=" + orderId);
         params.put("vnp_ExpireDate", expireDate);
         params.put("vnp_TxnRef", vnp_TxnRef);
         List<String> fieldNames = new ArrayList<>(params.keySet());

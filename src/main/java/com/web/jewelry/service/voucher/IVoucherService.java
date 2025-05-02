@@ -14,12 +14,18 @@ public interface IVoucherService {
     List<Voucher> searchVouchers(String query);
     Voucher getVoucherById(Long id);
     Voucher getVoucherByCode(String code);
-    List<Voucher> getVoucherByType(EVoucherType type);
     List<Voucher> getValidVouchers();
     Voucher addVoucher(VoucherRequest request);
     Voucher updateVoucher(Long id, VoucherRequest request);
     void deleteVoucher(Long id);
+
+    Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId);
+
     List<Voucher> validateVouchers(OrderRequest request);
     VoucherResponse convertToResponse(Voucher voucher);
     List<VoucherResponse> convertToResponse(List<Voucher> vouchers);
+
+    List<Voucher> getValidVouchersForOrder(OrderRequest request);
+
+    void decreaseVoucherQuantity(Long id);
 }

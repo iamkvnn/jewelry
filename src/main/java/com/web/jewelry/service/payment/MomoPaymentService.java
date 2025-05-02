@@ -15,6 +15,7 @@ import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -32,10 +33,13 @@ public class MomoPaymentService {
     private final INotificationService notificationService;
     //private final ModelMapper modelMapper;
 
+    @Value("${FE_BASE_URL}")
+    private String feBaseUrl;
+
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         Order order = orderService.getOrder(orderId);
         if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)){
-            String returnUrl = "https://momo.vn";
+            String returnUrl = feBaseUrl + "checkouts/thank-you?orderId=" + orderId;
             String notifyUrl = "https://ae92-14-169-5-215.ngrok-free.app/api/v1/payments/momo-callback";
             MomoPaymentRequest request = momoConfig.createPaymentRequest(orderId, order.getTotalPrice().toString(),
                     "Thanh toán đơn hàng " + orderId, returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM);
