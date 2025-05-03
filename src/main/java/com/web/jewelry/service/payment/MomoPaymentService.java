@@ -48,8 +48,8 @@ public class MomoPaymentService {
     public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)){
-            String returnUrl = feBaseUrl + "checkouts/thank-you?orderId=" + orderId;
-            String notifyUrl = "https://ae92-14-169-5-215.ngrok-free.app/api/v1/payments/momo-callback";
+            String returnUrl = feBaseUrl + "/checkouts/thank-you?orderId=" + orderId;
+            String notifyUrl = "https://api.shinyjewelry.shop/api/v1/payments/momo-callback";
             MomoPaymentRequest request = momoConfig.createPaymentRequest(orderId, order.getTotalPrice().toString(),
                     "Thanh toán đơn hàng " + orderId, returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM);
 
@@ -75,7 +75,7 @@ public class MomoPaymentService {
                 momoPayment.setStatus(EPaymentStatus.PAID);
                 momoPayment.setPaymentDate(LocalDateTime.now());
                 momoPayment.setRequestId(response.get("requestId").toString());
-                momoPayment.setTransactionId(Long.parseLong(response.get("transactionId").toString()));
+                momoPayment.setTransactionId(Long.parseLong(response.get("transId").toString()));
                 momoPayment.setResultCode(Integer.parseInt(response.get("resultCode").toString()));
                 momoPaymentRepository.save(momoPayment);
                 notificationService.sendNotificationToSpecificCustomer(
