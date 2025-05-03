@@ -40,9 +40,6 @@ public class MomoPaymentConfig {
         return hexString.toString();
     }
     public String sendToMomo(MomoPaymentRequest request){
-        System.out.println("DEBUG" + request.getRequestType().getValue());
-        System.out.println("SIGNER_KEY_AFT: " + request.getSignature());
-        System.out.println("REQUESTID_AFT: " + request.getRequestId());
         String jsonRequest = "{"
                 + "\"partnerCode\":\"" + request.getPartnerCode() + "\","
                 + "\"accessKey\":\"" + request.getAccessKey() + "\","
@@ -66,8 +63,6 @@ public class MomoPaymentConfig {
         try (Response response = client.newCall(momoRequest).execute()) {
             assert response.body() != null;
             String responseBody = response.body().string(); // Đọc body một lần
-            System.out.println("HTTP Response Code: " + response.code());
-            System.out.println("HTTP Response Body: " + responseBody);
 
             return responseBody; // Trả về nội dung
         } catch (IOException e) {
@@ -89,10 +84,7 @@ public class MomoPaymentConfig {
                 "redirectUrl=" + returnUrl + "&" +
                 "requestId=" + requestId + "&" +
                 "requestType=" + requestType.getValue();
-        System.out.println("RAWDATA: " + requestRawData);
         String signature = generateSignature(requestRawData, secretKey);
-        System.out.println("SIGNATURE: " + signature);
-        System.out.println("REQUESTID: " + requestId);
         return new MomoPaymentRequest(partnerCode, accessKey, requestId, amount, orderId, orderInfo, returnUrl,
                 notifyUrl, extraData, requestType, signature);
     }
@@ -120,10 +112,8 @@ public class MomoPaymentConfig {
                 rawData.setLength(rawData.length() - 1);
             }
 
-            System.out.println("RAWDATA: " + rawData);
             // Tạo signature mới
             String generatedSignature = generateSignature(rawData.toString(), secretKey);
-            System.out.println("New Signature: " + generatedSignature);
             return generatedSignature.equals(signatureFromMoMo);
         } catch (Exception e) {
             e.printStackTrace();

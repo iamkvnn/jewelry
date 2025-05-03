@@ -27,7 +27,6 @@ public class PaymentController {
     }
     @PostMapping("/momo-callback")
     public ResponseEntity<ApiResponse> handleMoMoCallback(@RequestBody Map<String, Object> response) {
-        System.out.println("MoMo Response: " + response);
         momoPaymentService.checkPayment(response) ;
         return ResponseEntity.status(204).build();
     }
@@ -40,7 +39,6 @@ public class PaymentController {
 
     @GetMapping("/IPN")
     public ResponseEntity<VNPayIPNResponse> handleVNPayIPN(HttpServletRequest request) throws NoSuchAlgorithmException, InvalidKeyException {
-        System.out.println("VNPay Response: " + request.getQueryString());
         if (vnPayPaymentService.checkPayment(request)) {
             return ResponseEntity.ok(new VNPayIPNResponse("00", "Success"));
         } else {

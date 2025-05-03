@@ -1,10 +1,7 @@
 package com.web.jewelry.model;
 
 import com.web.jewelry.enums.EPaymentStatus;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +21,7 @@ public abstract class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
     protected Long amount;
+    @Enumerated(EnumType.STRING)
     protected EPaymentStatus status;
     protected LocalDateTime paymentDate;
     protected String paymentInfo;
