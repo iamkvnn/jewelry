@@ -139,9 +139,18 @@ public class NotificationService implements INotificationService {
     public void markAsReadAll() {
         User user = userService.getCurrentUser();
         switch (user.getRole()) {
-            case CUSTOMER -> userNotificationRepository.markAsReadByCustomerId(user.getId());
-            case STAFF -> userNotificationRepository.markAsReadByStaffId(user.getId());
-            case MANAGER -> userNotificationRepository.markAsReadByManagerId(user.getId());
+            case CUSTOMER -> userNotificationRepository.findUnreadByCustomerId(user.getId()).forEach(userNotification -> {
+                userNotification.setStatus(ENotificationStatus.READ);
+                userNotificationRepository.save(userNotification);
+            });
+            case STAFF -> userNotificationRepository.findUnreadByStaffId(user.getId()).forEach(userNotification -> {
+                userNotification.setStatus(ENotificationStatus.READ);
+                userNotificationRepository.save(userNotification);
+            });
+            case MANAGER -> userNotificationRepository.findUnreadByManagerId(user.getId()).forEach(userNotification -> {
+                userNotification.setStatus(ENotificationStatus.READ);
+                userNotificationRepository.save(userNotification);
+            });
         }
     }
 
@@ -160,6 +169,7 @@ public class NotificationService implements INotificationService {
         });
     }
 
+    @Transactional
     @Override
     public void deleteAllNotification() {
         User user = userService.getCurrentUser();
