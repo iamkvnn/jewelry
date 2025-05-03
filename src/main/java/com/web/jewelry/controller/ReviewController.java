@@ -35,7 +35,8 @@ public class ReviewController {
 
     @GetMapping("/{productId}")
     public ResponseEntity<ApiResponse>  getProductReviews(@PathVariable Long productId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "5") int size) {
-        Page<Review> reviews = reviewService.getProductReviews(productId, PageRequest.of(page-1, size));
+        Page<Review> reviews = reviewService.getProductReviews(productId, PageRequest.of(page - 1, size,
+                Sort.by(Sort.Order.asc("isResponded"), Sort.Order.desc("rating"))));
         Page<ReviewResponse> responses = reviewService.convertToPageResponse(reviews);
         return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
     }
