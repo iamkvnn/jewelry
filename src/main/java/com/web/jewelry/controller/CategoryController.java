@@ -46,8 +46,8 @@ public class CategoryController {
 
     @GetMapping("/category")
     public ResponseEntity<ApiResponse> getCategoryByName(@RequestParam String name){
-        CategoryResponse category = categoryService.getCategoryByName(name);
-        return  ResponseEntity.ok(new ApiResponse("200", "Success", category));
+        List<CategoryResponse> categories = categoryService.getCategoryByName(name);
+        return  ResponseEntity.ok(new ApiResponse("200", "Success", categories));
     }
 
     @PreAuthorize("hasRole('MANAGER')")

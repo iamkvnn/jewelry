@@ -9,7 +9,7 @@ public class ReviewResponse {
     private Long id;
     private String content;
     private Long rating;
-    private Long productId;
+    private ProductResponse product;
     private UserResponse reviewer;
     private LocalDateTime createdAt;
     private ReviewReplyResponse response;

@@ -4,14 +4,13 @@ import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.dto.request.VoucherRequest;
 import com.web.jewelry.dto.response.ApiResponse;
 import com.web.jewelry.dto.response.VoucherResponse;
-import com.web.jewelry.model.Voucher;
 import com.web.jewelry.service.voucher.IVoucherService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,26 +19,26 @@ public class VoucherController {
     private final IVoucherService voucherService;
 
     @GetMapping("/all")
-    public ResponseEntity<ApiResponse> getAllVouchers() {
-        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getAllVouchers());
+    public ResponseEntity<ApiResponse> getAllVouchers(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getAllVouchers(PageRequest.of(page - 1, size)));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse> searchVouchers(@RequestParam String query) {
-        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.searchVouchers(query));
+    public ResponseEntity<ApiResponse> searchVouchers(@RequestParam String query, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.searchVouchers(query, PageRequest.of(page - 1, size)));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
     @GetMapping("/valid")
-    public ResponseEntity<ApiResponse> getValidVouchers() {
-        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchers());
+    public ResponseEntity<ApiResponse> getValidVouchers(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchers(PageRequest.of(page - 1, size)));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
     @GetMapping("/valid-for-order")
-    public ResponseEntity<ApiResponse> getValidVouchersForOrder(@RequestBody OrderRequest request) {
-        List<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchersForOrder(request));
+    public ResponseEntity<ApiResponse> getValidVouchersForOrder(@RequestBody OrderRequest request, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
+        Page<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchersForOrder(request, PageRequest.of(page - 1, size)));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
@@ -51,9 +50,8 @@ public class VoucherController {
 
     @PostMapping("/check-validate")
     public ResponseEntity<ApiResponse> validateVoucher(@RequestBody OrderRequest request) {
-        List<Voucher> validatedVouchers = voucherService.validateVouchers(request);
-        List<VoucherResponse> responses = voucherService.convertToResponse(validatedVouchers);
-        return ResponseEntity.ok(new ApiResponse("200", "Success", responses));
+        voucherService.validateVouchers(request);
+        return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
 
     @PreAuthorize("hasRole('MANAGER')")

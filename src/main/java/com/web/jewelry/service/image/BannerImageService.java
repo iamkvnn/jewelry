@@ -33,6 +33,10 @@ public class BannerImageService implements IImageService {
                 .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
     }
 
+    public List<BannerImage> getImagesByPosition(String position) {
+        return bannerImageRepository.findAllByPosition(position);
+    }
+
     @Override
     public List<ImageResponse> addImage(Long id, List<MultipartFile> files) {
         return null;
@@ -46,7 +50,7 @@ public class BannerImageService implements IImageService {
         imageSaverContext.deleteImage(existingImage.getName());
         Map<String, String> imageData = imageSaverContext.saveImage(file);
         existingImage.setName(imageData.get("publicId"));
-        existingImage.setUrl(imageData.get("url"));
+        existingImage.setUrl("/api/v1/banners/banner/" + imageData.get("url"));
         existingImage.setUpdatedAt(LocalDateTime.now());
         bannerImageRepository.save(existingImage);
         return convertToResponse(existingImage);

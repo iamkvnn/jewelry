@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface CollectionRepository extends JpaRepository<Collection, Long> {
-    Collection findByName(String name);
-
     boolean existsByName(String name);
+    List<Collection> findByNameContaining(String name);
 }

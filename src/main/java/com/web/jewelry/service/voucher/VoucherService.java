@@ -7,6 +7,7 @@ import com.web.jewelry.dto.request.VoucherRequest;
 import com.web.jewelry.dto.response.VoucherResponse;
 import com.web.jewelry.enums.EVoucherApplicabilityType;
 import com.web.jewelry.enums.EVoucherType;
+import com.web.jewelry.exception.AlreadyExistException;
 import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Voucher;
@@ -17,6 +18,8 @@ import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +39,8 @@ public class VoucherService implements IVoucherService {
     private final ModelMapper modelMapper;
 
     @Override
-    public List<Voucher> getAllVouchers() {
-        return voucherRepository.findAll();
+    public Page<Voucher> getAllVouchers(Pageable pageable) {
+        return voucherRepository.findAll(pageable);
     }
 
     @Override
@@ -46,8 +49,8 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
-    public List<Voucher> searchVouchers(String query) {
-        return voucherRepository.searchByCodeOrName(query);
+    public Page<Voucher> searchVouchers(String query, Pageable pageable) {
+        return voucherRepository.searchByCodeOrName(query, pageable);
     }
 
     @Override
@@ -56,8 +59,8 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
-    public List<Voucher> getValidVouchers() {
-        return voucherRepository.findByValidFromBeforeAndValidToAfter(LocalDateTime.now(), LocalDateTime.now());
+    public Page<Voucher> getValidVouchers(Pageable pageable) {
+        return voucherRepository.findByValidFromBeforeAndValidToAfter(LocalDateTime.now(), LocalDateTime.now(), pageable);
     }
 
     @Transactional
@@ -65,8 +68,9 @@ public class VoucherService implements IVoucherService {
     public Voucher addVoucher(VoucherRequest request) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
         validateRequest(request);
-        if (voucherRepository.existsByCode(request.getCode())) {
-            throw new BadRequestException("Voucher code already exists");
+        Voucher existingVoucher = voucherRepository.findByCode(request.getCode()).orElse(null);
+        if (existingVoucher != null && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
+            throw new AlreadyExistException("A valid voucher code already exists");
         }
         Voucher voucher = voucherRepository.save(Voucher.builder()
                 .code(request.getCode())
@@ -121,6 +125,10 @@ public class VoucherService implements IVoucherService {
         validateRequest(request);
         Voucher oldVoucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        Voucher existingVoucher = voucherRepository.findByCode(request.getCode()).orElse(null);
+        if (existingVoucher != null && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
+            throw new AlreadyExistException("A valid voucher code already exists");
+        }
         updateVoucherDetails(oldVoucher, request);
         Voucher voucher = voucherRepository.save(oldVoucher);
         voucher.setVoucherApplicabilities(updateVoucherApplicability(voucher, request.getApplicabilities()));
@@ -239,15 +247,15 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
-    public List<VoucherResponse> convertToResponse(List<Voucher> vouchers) {
-        return vouchers.stream().map(this::convertToResponse).toList();
+    public Page<VoucherResponse> convertToResponse(Page<Voucher> vouchers) {
+        return vouchers.map(this::convertToResponse);
     }
 
     @Override
-    public List<Voucher> getValidVouchersForOrder(OrderRequest request) {
+    public Page<Voucher> getValidVouchersForOrder(OrderRequest request, Pageable pageable) {
         Long customerId = userService.getCurrentUser().getId();
         Long totalProductPrice = request.getTotalProductPrice();
-        return voucherRepository.findValidVoucherForOrder(LocalDateTime.now(), totalProductPrice, customerId);
+        return voucherRepository.findValidVoucherForOrder(LocalDateTime.now(), totalProductPrice, customerId, pageable);
     }
 
     @Override

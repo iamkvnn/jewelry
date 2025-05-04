@@ -18,7 +18,6 @@ public class ProductResponse {
     private List<AttributeValueResponse> attributes;
     private List<ProductSizeResponse> productSizes;
     private List<ImageResponse> images;
-    private List<ReviewResponse> reviews;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

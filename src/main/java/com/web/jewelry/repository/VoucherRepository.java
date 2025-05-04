@@ -1,21 +1,21 @@
 package com.web.jewelry.repository;
 
 import com.web.jewelry.model.Voucher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
-    boolean existsByCode(String code);
     Optional<Voucher> findByCode(String code);
-    List<Voucher> findByValidFromBeforeAndValidToAfter(LocalDateTime validFrom, LocalDateTime validTo);
+    Page<Voucher> findByValidFromBeforeAndValidToAfter(LocalDateTime validFrom, LocalDateTime validTo, Pageable pageable);
 
     @Query("SELECT v FROM Voucher v WHERE LOWER(CONCAT(v.code, ' ', v.name)) LIKE LOWER(CONCAT('%', :query, '%'))")
-    List<Voucher> searchByCodeOrName(@Param("query") String query);
+    Page<Voucher> searchByCodeOrName(@Param("query") String query, Pageable pageable);
 
     @Query("SELECT COUNT(v) FROM Voucher v JOIN v.orders o WHERE v.code = :code AND o.customerId = :customerId")
     Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId);
@@ -30,5 +30,5 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
            WHERE ov.voucher.id = v.id AND ov.customerId = :customerId) < v.limitUsePerCustomer
       AND v.quantity > 0
     """)
-    List<Voucher> findValidVoucherForOrder(LocalDateTime now, Long totalPrice, Long customerId);
+    Page<Voucher> findValidVoucherForOrder(LocalDateTime now, Long totalPrice, Long customerId, Pageable pageable);
 }

@@ -201,12 +201,8 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public Page<Order> getOrders(EOrderStatus status, Long page, Long size) {
-        if (status == null) {
-            return orderRepository.findAll(PageRequest.of(page.intValue() - 1, size.intValue()));
-        } else {
-            return orderRepository.findByStatus(status, PageRequest.of(page.intValue() - 1, size.intValue()));
-        }
+    public Page<Order> getOrders(EOrderStatus status, Long page, Long size, String query) {
+        return orderRepository.findByQuery(status, query, PageRequest.of(page.intValue() - 1, size.intValue()));
     }
 
     @Override

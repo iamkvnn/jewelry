@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface ICollectionService {
     List<CollectionResponse> getAllCollections();
     Collection getCollectionById(Long id);
-    CollectionResponse getCollectionByName(String name);
+    List<CollectionResponse> getCollectionByName(String name);
     CollectionResponse addCollection(CollectionRequest request);
     CollectionResponse updateCollection(Long id, CollectionRequest request);
     void deleteCollectionById(Long id);

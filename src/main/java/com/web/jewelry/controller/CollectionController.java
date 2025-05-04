@@ -40,8 +40,8 @@ public class CollectionController {
 
     @GetMapping("/collection")
     public ResponseEntity<ApiResponse> getCollectionByName(@RequestParam String name){
-        CollectionResponse collection = collectionService.getCollectionByName(name);
-        return  ResponseEntity.ok(new ApiResponse("200", "Success", collection));
+        List<CollectionResponse> collections = collectionService.getCollectionByName(name);
+        return  ResponseEntity.ok(new ApiResponse("200", "Success", collections));
     }
 
     @PreAuthorize("hasRole('MANAGER')")

@@ -49,8 +49,9 @@ public class OrderController {
 
     @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/all")
-    public ResponseEntity<ApiResponse> getOrders(@RequestParam(required = false) EOrderStatus status, @RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
-        Page<Order> orders = orderService.getOrders(status, page, size);
+    public ResponseEntity<ApiResponse> getOrders(@RequestParam(required = false) EOrderStatus status, @RequestParam(required = false) String query,
+                                                 @RequestParam(defaultValue = "1") Long page, @RequestParam(defaultValue = "30") Long size) {
+        Page<Order> orders = orderService.getOrders(status, page, size, query);
         Page<OrderResponse> orderResponses = orderService.convertToResponse(orders);
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponses));
     }

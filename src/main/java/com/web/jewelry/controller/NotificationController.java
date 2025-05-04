@@ -15,7 +15,7 @@ public class NotificationController {
     private final INotificationService notificationService;
 
     @GetMapping("/all")
-    public ResponseEntity<ApiResponse> getCustomerNotifications(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<ApiResponse> getNotifications(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<NotificationResponse> notifications = notificationService.getNotifications(page, size);
         return ResponseEntity.ok(new ApiResponse("200", "Success", notifications));
     }
@@ -37,7 +37,6 @@ public class NotificationController {
         notificationService.markAsReadAll();
         return ResponseEntity.ok(new ApiResponse("200", "Success", null));
     }
-
 
     @DeleteMapping("/delete/{notificationId}")
     public ResponseEntity<ApiResponse> deleteNotification(@PathVariable Long notificationId) {
