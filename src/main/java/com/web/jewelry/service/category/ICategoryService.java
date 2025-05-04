@@ -10,7 +10,7 @@ import java.util.List;
 public interface ICategoryService {
     List<CategoryResponse> getCategoriesByParentId(Long parentId);
     Category getCategoryById(Long id);
-    CategoryResponse getCategoryByName(String name);
+    List<CategoryResponse> getCategoryByName(String name);
     List<CategoryResponse> getAllCategories();
     CategoryResponse addCategory(CategoryRequest request);
     CategoryResponse updateCategory(Long id, CategoryRequest request);

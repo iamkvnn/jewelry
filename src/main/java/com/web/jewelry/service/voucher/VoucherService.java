@@ -70,7 +70,7 @@ public class VoucherService implements IVoucherService {
         validateRequest(request);
         Voucher existingVoucher = voucherRepository.findByCode(request.getCode()).orElse(null);
         if (existingVoucher != null && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
-            throw new AlreadyExistException("Voucher code already exists");
+            throw new AlreadyExistException("A valid voucher code already exists");
         }
         Voucher voucher = voucherRepository.save(Voucher.builder()
                 .code(request.getCode())
@@ -125,6 +125,10 @@ public class VoucherService implements IVoucherService {
         validateRequest(request);
         Voucher oldVoucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        Voucher existingVoucher = voucherRepository.findByCode(request.getCode()).orElse(null);
+        if (existingVoucher != null && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
+            throw new AlreadyExistException("A valid voucher code already exists");
+        }
         updateVoucherDetails(oldVoucher, request);
         Voucher voucher = voucherRepository.save(oldVoucher);
         voucher.setVoucherApplicabilities(updateVoucherApplicability(voucher, request.getApplicabilities()));

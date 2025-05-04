@@ -7,13 +7,10 @@ import com.web.jewelry.model.Collection;
 import com.web.jewelry.repository.CollectionRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -32,8 +29,8 @@ public class CollectionService implements ICollectionService{
     }
 
     @Override
-    public CollectionResponse getCollectionByName(String name) {
-        return convertToResponse(collectionRepository.findByName(name));
+    public List<CollectionResponse> getCollectionByName(String name) {
+        return collectionRepository.findByNameContaining(name).stream().map(this::convertToResponse).toList();
     }
 
     @Override

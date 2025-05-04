@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final IUserService userService;
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/customers")
     public ResponseEntity<ApiResponse> getAllCustomer(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size){
         Page<Customer> customers = userService.getAllCustomers(PageRequest.of(page-1, size));
@@ -27,6 +28,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/staffs")
     public ResponseEntity<ApiResponse> getAllStaff(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size){
         Page<Staff> staffs = userService.getAllStaff(PageRequest.of(page-1, size));
@@ -34,6 +36,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/customers/{id}")
     public ResponseEntity<ApiResponse> getCustomer(@PathVariable Long id) {
         User user = userService.getCustomerById(id);
@@ -41,6 +44,7 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
+    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/staffs/{id}")
     public ResponseEntity<ApiResponse> getStaff(@PathVariable Long id) {
         User user = userService.getStaffById(id);
@@ -127,7 +131,7 @@ public class UserController {
 
     @PreAuthorize("hasAnyRole('MANAGER', 'STAFF')")
     @GetMapping("/search-customers")
-    public ResponseEntity<ApiResponse> searchCustomers(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
+    public ResponseEntity<ApiResponse> searchCustomers(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Customer> customers = userService.findCustomerByName(name, PageRequest.of(page-1, size));
         Page<UserResponse> response = userService.convertToUserResponse(customers);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
@@ -135,7 +139,7 @@ public class UserController {
 
     @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/search-staffs")
-    public ResponseEntity<ApiResponse> searchStaffs(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "15") int size) {
+    public ResponseEntity<ApiResponse> searchStaffs(@RequestParam String name, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Staff> staffs = userService.findStaffByName(name, PageRequest.of(page-1, size));
         Page<UserResponse> response = userService.convertToUserResponse(staffs);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));

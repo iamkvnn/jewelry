@@ -34,7 +34,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final  String [] PRIVATE_ENDPOINTS = {"/api/v1/carts/**", "/api/v1/orders/**",
-            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**", "/api/v1/banners/**",
+            "/api/v1/addresses/**", "/api/v1/notifications/**", "/api/v1/wishlist/**",
             "/api/v1/payments/momo-payment/**", "/api/v1/payments/vnpay-payment/**", "/api/v1/dashboard/**",
             "/api/v1/users/**", "/api/v1/privacy-and-terms/update/**",};
 

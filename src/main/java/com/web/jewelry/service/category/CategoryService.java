@@ -30,9 +30,9 @@ public class CategoryService implements ICategoryService{
     }
 
     @Override
-    public CategoryResponse getCategoryByName(String name) {
-        return categoryRepository.findByName(name).map(this::convertToResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+    public List<CategoryResponse> getCategoryByName(String name) {
+        return categoryRepository.findByNameContaining(name).stream()
+                .map(this::convertToResponse).toList();
     }
 
     @Override

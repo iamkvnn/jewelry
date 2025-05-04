@@ -1,6 +1,5 @@
 package com.web.jewelry.service.image;
 
-import com.web.jewelry.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +29,7 @@ public class LocalImageSaverStrategy implements IImageSaverStrategy{
             fileName = publicId + "." + extension;
             Path filePath = uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            return filePath.toString();
+            return fileName;
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -47,7 +46,6 @@ public class LocalImageSaverStrategy implements IImageSaverStrategy{
                 throw new RuntimeException("Failed to delete image");
             }
         }
-        else throw new ResourceNotFoundException("File not found");
     }
 
     private String getFileExtension(String fileName) {
