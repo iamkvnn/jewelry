@@ -76,7 +76,7 @@ public class VNPayPaymentService{
         params.put("vnp_OrderInfo", "Thanh toan don hang " + orderId);
         String orderType = "other";
         params.put("vnp_OrderType", orderType);
-        params.put("vnp_ReturnUrl", feBaseUrl + "/checkouts/thank-you?orderId=" + orderId);
+        params.put("vnp_ReturnUrl", feBaseUrl + "/checkouts/thank-you/" + orderId);
         params.put("vnp_ExpireDate", expireDate);
         params.put("vnp_TxnRef", vnp_TxnRef);
         List<String> fieldNames = new ArrayList<>(params.keySet());
