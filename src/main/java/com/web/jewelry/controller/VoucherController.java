@@ -36,7 +36,7 @@ public class VoucherController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));
     }
 
-    @GetMapping("/valid-for-order")
+    @PostMapping("/valid-for-order")
     public ResponseEntity<ApiResponse> getValidVouchersForOrder(@RequestBody OrderRequest request, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "30") int size) {
         Page<VoucherResponse> vouchers = voucherService.convertToResponse(voucherService.getValidVouchersForOrder(request, PageRequest.of(page - 1, size)));
         return ResponseEntity.ok(new ApiResponse("200", "Success", vouchers));

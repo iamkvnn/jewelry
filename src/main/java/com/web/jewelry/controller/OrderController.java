@@ -41,7 +41,7 @@ public class OrderController {
         return ResponseEntity.ok(new ApiResponse("200", "Success", orderResponses));
     }
 
-    @GetMapping("/shipping-fee")
+    @PostMapping("/shipping-fee")
     public ResponseEntity<ApiResponse> getEstimateShippingFee(@RequestBody AddressResponse address, @RequestParam EShippingMethod method) {
         Long fee = orderService.getEstimateShippingFee(address.getDistrict(), address.getProvince(), method);
         return ResponseEntity.ok(new ApiResponse("200", "Success", fee));
