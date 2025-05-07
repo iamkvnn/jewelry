@@ -71,7 +71,7 @@ public class VNPayPaymentService{
         params.put("vnp_BankCode", "VNBANK");
         params.put("vnp_CreateDate", createDate);
         params.put("vnp_CurrCode", "VND");
-        params.put("vnp_IpAddr", "127.0.0.1");
+        params.put("vnp_IpAddr", "103.149.252.125");
         params.put("vnp_Locale", "vn");
         params.put("vnp_OrderInfo", "Thanh toan don hang " + orderId);
         String orderType = "other";

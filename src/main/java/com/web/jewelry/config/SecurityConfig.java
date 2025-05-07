@@ -45,7 +45,6 @@ public class SecurityConfig {
     @Value("${FE_BASE_URL_ADMIN}")
     private String feBaseUrlAdmin;
 
-
     private final JWTAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JWTAccessDeniedHandler jwtAccessDeniedHandler;
 
