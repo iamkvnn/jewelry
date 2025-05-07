@@ -94,7 +94,7 @@ public class UserService implements IUserService {
                 case CUSTOMER -> customerRepository.save((Customer) user);
             }
             emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Xác nhận thay đổi mật khẩu", "Mật khẩu của bạn đã được thay đổi thành công.\n" +
-                    "Nếu bạn không thực hiện thay đổi này, vui lòng nhấp vào liên kết sau để khôi phục mật khẩu của bạn: https://example.com/reset-password?token=" + token));
+                    "Nếu bạn không thực hiện thay đổi này, vui lòng nhấp vào liên kết sau để khôi phục mật khẩu của bạn: https://shinyjewelry.shop/recover-password?token=" + token));
         } else {
             throw new BadRequestException("Old password is incorrect");
         }
@@ -124,26 +124,32 @@ public class UserService implements IUserService {
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
-        String email = request.getEmail();
-        User user = switch (request.getRole()) {
-            case MANAGER -> getManagerByEmail(email);
-            case STAFF -> getStaffByEmail(email);
-            case CUSTOMER -> getCustomerByEmail(email);
-        };
         if (request.getToken() == null && request.getCode() == null) {
             throw new BadRequestException("Verification code is required");
         }
-        if (request.getCode() != null) {
-            if (verificationCodes.containsKey(email + request.getRole()) && verificationCodes.get(email + request.getRole()).equals(request.getCode())) {
-                verificationCodes.remove(email);
+        User user;
+        if (request.getToken() != null) {
+            user = customerRepository.findByBackupToken(request.getToken()).orElse(null);
+            if (user == null) {
+                user = staffRepository.findByBackupToken(request.getToken()).orElse(null);
+            }
+            if (user == null) {
+                user = managerRepository.findByBackupToken(request.getToken()).orElse(null);
+            }
+            if (user == null || user.getBackupTokenExpireAt().isBefore(LocalDateTime.now()) || !user.getBackupToken().equals(request.getToken())) {
+                throw new BadRequestException("Invalid token");
+            }
+        } else {
+            if (verificationCodes.containsKey(request.getEmail() + request.getRole()) && verificationCodes.get(request.getEmail() + request.getRole()).equals(request.getCode())) {
+                verificationCodes.remove(request.getEmail() + request.getRole());
             } else {
                 throw new BadRequestException("Invalid verification code");
             }
-        }
-        else if (user.getBackupToken() != null && user.getBackupTokenExpireAt() != null) {
-            if (user.getBackupTokenExpireAt().isBefore(LocalDateTime.now()) || !user.getBackupToken().equals(request.getToken())) {
-                throw new BadRequestException("Invalid token");
-            }
+            user = switch (request.getRole()) {
+                case MANAGER -> getManagerByEmail(request.getEmail());
+                case STAFF -> getStaffByEmail(request.getEmail());
+                case CUSTOMER -> getCustomerByEmail(request.getEmail());
+            };
         }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setBackupToken(null);
@@ -328,7 +334,7 @@ public class UserService implements IUserService {
             user.setDeleteAccountToken(token);
             user.setDeleteAccountTokenExpiration(LocalDateTime.now().plusMinutes(5));
             emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Xác nhận xóa tài khoản", "Tài khoản của bạn đã được gửi yêu cầu xóa\n" +
-                "Nếu bạn không thực hiện thay đổi này vui lòng bỏ qua email này. Nếu thực sự muốn xoóa, vui lòng nhấp vào liên kết sau trong vòng 5 phút để xóa tài khoản của bạn: https://example.com/confirm-delete?token=" + token));
+                "Nếu bạn không thực hiện thay đổi này vui lòng bỏ qua email này. Nếu thực sự muốn xoóa, vui lòng nhấp vào liên kết sau trong vòng 5 phút để xóa tài khoản của bạn: https://shinyjewelry.shop/confirm-delete?token=" + token));
             customerRepository.save(user);
         } else {
             throw new BadRequestException("Invalid user role");
