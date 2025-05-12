@@ -208,6 +208,7 @@ public class ProductService implements IProductService {
         }
     }
 
+    @Transactional
     @Override
     public void deleteProduct(Long productId) {
         Product product = getProductById(productId);
