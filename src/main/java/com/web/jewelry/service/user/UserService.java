@@ -115,11 +115,15 @@ public class UserService implements IUserService {
         };
         emailQueueService.enqueue(new EmailRequest(email, "Xác nhận khôi phục mật khẩu tài khoản " + roleString + " tại Shiny", "Mã xác nhận của bạn là: " + code));
         verificationCodes.put(user.getEmail() + user.getRole(), code);
-        scheduleCodeExpiration(user.getEmail() + user.getRole());
+        scheduleCodeExpiration(user.getEmail() + user.getRole(), code);
     }
 
-    private void scheduleCodeExpiration(String key) {
-        scheduler.schedule(() -> verificationCodes.remove(key), 120, TimeUnit.SECONDS);
+    private void scheduleCodeExpiration(String key, String code) {
+        scheduler.schedule(() -> {
+            if (verificationCodes.containsKey(key) && verificationCodes.get(key).equals(code)) {
+                verificationCodes.remove(key);
+            }
+        }, 120, TimeUnit.SECONDS);
     }
 
     @Override

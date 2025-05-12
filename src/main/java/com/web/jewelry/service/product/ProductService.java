@@ -14,6 +14,7 @@ import com.web.jewelry.service.category.ICategoryService;
 import com.web.jewelry.service.collection.ICollectionService;
 import com.web.jewelry.service.attribute.IAttributeValueService;
 import com.web.jewelry.service.notification.INotificationService;
+import com.web.jewelry.service.observer.ProductSizeObservable;
 import com.web.jewelry.service.productSize.IProductSizeService;
 import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class ProductService implements IProductService {
     private final IUserService userService;
     private final ModelMapper modelMapper;
     private final INotificationService notificationService;
+    private final ProductSizeObservable productSizeObservable;
 
     @Override
     public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
@@ -210,6 +212,10 @@ public class ProductService implements IProductService {
     public void deleteProduct(Long productId) {
         Product product = getProductById(productId);
         product.setStatus(EProductStatus.NOT_AVAILABLE);
+        product.getProductSizes().forEach(productSize -> {
+            productSize.setDeleted(true);
+            productSizeObservable.notifyObservers(productSize.getId());
+        });
         productRepository.save(product);
     }
 
