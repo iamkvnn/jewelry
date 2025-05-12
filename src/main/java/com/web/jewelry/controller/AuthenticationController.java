@@ -76,11 +76,10 @@ public class AuthenticationController {
         emailQueueService.enqueue(new EmailRequest(email, "Xác nhận đăng ký tài khoản", "Mã xác nhận của bạn là: " + code));
         long expiredAt = System.currentTimeMillis() + 60 * 1000;
         verificationCodes.put(email, code);
-        scheduleCodeExpiration(email);
+        scheduleCodeExpiration(email, code);
 
         Map<String, Object> response = new HashMap<>();
         response.put("expiredAt", expiredAt);
-        System.out.println(code);
         return ResponseEntity.ok(new ApiResponse("200", "Success", response));
     }
 
@@ -93,8 +92,12 @@ public class AuthenticationController {
         return ResponseEntity.ok(new ApiResponse("1001", "Failed", "Verify code failed"));
     }
 
-    private void scheduleCodeExpiration(String email) {
-        scheduler.schedule(() -> verificationCodes.remove(email), 60, TimeUnit.SECONDS);
+    private void scheduleCodeExpiration(String email, String code) {
+        scheduler.schedule(() -> {
+            if (verificationCodes.containsKey(email) && verificationCodes.get(email).equals(code)) {
+                verificationCodes.remove(email);
+            }
+        }, 60, TimeUnit.SECONDS);
     }
 
     @PostMapping("/reset-password/send-email")
