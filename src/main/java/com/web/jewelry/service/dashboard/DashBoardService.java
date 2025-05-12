@@ -18,14 +18,7 @@ public class DashBoardService implements IDashboardService{
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
     private final CategoryRepository categoryRepository;
-    private final ProductRepository productRepository;
-    private final CollectionRepository collectionRepository;
     private final AddressService addressService;
-
-    @Override
-    public Long getTotalCustomers() {
-        return customerRepository.count();
-    }
 
     @Override
     public Long getTotalOrders(int month, int year) {
@@ -33,21 +26,6 @@ public class DashBoardService implements IDashboardService{
                 LocalDateTime.of(year, month, 1, 0, 0),
                 LocalDateTime.of(year, month + 1, 1, 0, 0)
         );
-    }
-
-    @Override
-    public Long getTotalProducts() {
-        return productRepository.count();
-    }
-
-    @Override
-    public Long getTotalCategories() {
-        return categoryRepository.count();
-    }
-
-    @Override
-    public Long getTotalCollections() {
-        return collectionRepository.count();
     }
 
     @Override

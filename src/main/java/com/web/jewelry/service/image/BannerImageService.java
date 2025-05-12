@@ -44,9 +44,9 @@ public class BannerImageService implements IImageService {
 
     @Override
     public BannerImageResponse updateImage(Long imageId, MultipartFile file) {
-        imageSaverContext.setImageSaverStrategy(local);
         BannerImage existingImage = bannerImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Image not found"));
+        imageSaverContext.setImageSaverStrategy(local);
         imageSaverContext.deleteImage(existingImage.getName());
         Map<String, String> imageData = imageSaverContext.saveImage(file);
         existingImage.setName(imageData.get("publicId"));

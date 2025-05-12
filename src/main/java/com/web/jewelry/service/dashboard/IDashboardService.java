@@ -5,11 +5,7 @@ import com.web.jewelry.dto.response.*;
 import java.util.List;
 
 public interface IDashboardService {
-    Long getTotalCustomers();
     Long getTotalOrders(int month, int year);
-    Long getTotalProducts();
-    Long getTotalCategories();
-    Long getTotalCollections();
     Long getRevenue(int month, int year);
     List<MonthlyCategoryRevenueResponse> getRevenueByCategory(int year);
     List<ProductSoldByCategoryResponse> getProductSoldByCategory(int month, int year);

@@ -25,42 +25,10 @@ public class DashBoardController {
     }
 
     @PreAuthorize("hasRole('MANAGER')")
-    @GetMapping("/total-customers")
-    public ResponseEntity<ApiResponse> getTotalCustomers() {
-        return ResponseEntity.ok(
-                new ApiResponse("200", "Success", dashboardService.getTotalCustomers())
-        );
-    }
-
-    @PreAuthorize("hasRole('MANAGER')")
     @GetMapping("/total-orders")
     public ResponseEntity<ApiResponse> getTotalOrders(@RequestParam int month, @RequestParam int year) {
         return ResponseEntity.ok(
                 new ApiResponse("200", "Success", dashboardService.getTotalOrders(month, year))
-        );
-    }
-
-    @PreAuthorize("hasRole('MANAGER')")
-    @GetMapping("/total-products")
-    public ResponseEntity<ApiResponse> getTotalProducts() {
-        return ResponseEntity.ok(
-                new ApiResponse("200", "Success", dashboardService.getTotalProducts())
-        );
-    }
-
-    @PreAuthorize("hasRole('MANAGER')")
-    @GetMapping("/total-categories")
-    public ResponseEntity<ApiResponse> getTotalCategories() {
-        return ResponseEntity.ok(
-                new ApiResponse("200", "Success", dashboardService.getTotalCategories())
-        );
-    }
-
-    @PreAuthorize("hasRole('MANAGER')")
-    @GetMapping("/total-collections")
-    public ResponseEntity<ApiResponse> getTotalCollections() {
-        return ResponseEntity.ok(
-                new ApiResponse("200", "Success", dashboardService.getTotalCollections())
         );
     }
 
