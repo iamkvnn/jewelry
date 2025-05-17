@@ -50,20 +50,6 @@ public class ProductService implements IProductService {
     public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
                                                      Long maxPrice, List<String> sizes, String dir, Pageable pageable) {
         Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, pageable);
-        if( dir != null && (dir.equals("asc") || dir.equals("desc"))) {
-            Comparator<Product> comparator = Comparator.comparing(
-                    p -> p.getProductSizes().stream()
-                            .map(ProductSize::getDiscountPrice)
-                            .min(Long::compareTo)
-                            .orElse(Long.MAX_VALUE)
-            );
-            if (dir.equals("desc")) {
-               comparator = comparator.reversed();
-            }
-            List<Product> sortedProducts = products.stream().sorted(comparator).collect(Collectors.toList());
-            Page<Product> response = new PageImpl<>(sortedProducts, pageable, products.getTotalElements());
-            return  convertToProductResponses(response);
-        }
         return  convertToProductResponses(products);
     }
 
