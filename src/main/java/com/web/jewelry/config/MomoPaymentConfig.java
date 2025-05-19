@@ -62,9 +62,9 @@ public class MomoPaymentConfig {
 
         try (Response response = client.newCall(momoRequest).execute()) {
             assert response.body() != null;
-            String responseBody = response.body().string(); // Đọc body một lần
+            // Đọc body một lần
 
-            return responseBody; // Trả về nội dung
+            return response.body().string(); // Trả về nội dung
         } catch (IOException e) {
             e.printStackTrace();
             return null;

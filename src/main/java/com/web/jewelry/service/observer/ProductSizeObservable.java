@@ -19,7 +19,7 @@ public class ProductSizeObservable {
 
     public void notifyObservers(Long productSizeId) {
         for (ProductSizeListener listener : listeners) {
-            listener.onProductSizeChange(productSizeId);
+            listener.onProductSizeDeleted(productSizeId);
         }
     }
 }

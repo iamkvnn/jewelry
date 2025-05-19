@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.enums.EVoucherType;
@@ -15,7 +15,7 @@ import java.util.List;
 @Component
 public class OrderValidationHandler extends OrderHandler {
     @Override
-    public Order process(OrderContext context) {
+    public Order process(OrderHandlerContext context) {
         OrderRequest orderRequest = context.getOrderRequest();
         List<OrderItem> orderItems = context.getOrderItems();
         List<Voucher> vouchers = context.getVouchers();

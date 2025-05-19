@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.model.Order;
 import com.web.jewelry.model.OrderItem;
@@ -14,14 +14,14 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Component
-public class OrderCompletionHandler extends  OrderHandler {
+public class OrderCompletionHandler extends OrderHandler {
     private final OrderRepository orderRepository;
     private final ICartService cartService;
     private final IProductSizeService productSizeService;
     private final IVoucherService voucherService;
 
     @Override
-    public Order process(OrderContext context) {
+    public Order process(OrderHandlerContext context) {
         Order order = context.getOrder();
         order.setOrderItems(context.getOrderItems());
         orderRepository.save(order);

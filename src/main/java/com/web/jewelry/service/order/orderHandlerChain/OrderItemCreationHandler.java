@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.exception.ResourceNotFoundException;
@@ -17,7 +17,7 @@ public class OrderItemCreationHandler extends OrderHandler {
     private final IProductSizeService productSizeService;
 
     @Override
-    public Order process(OrderContext context) {
+    public Order process(OrderHandlerContext context) {
         Order order = context.getOrder();
         Cart cart = context.getCart();
         OrderRequest request = context.getOrderRequest();

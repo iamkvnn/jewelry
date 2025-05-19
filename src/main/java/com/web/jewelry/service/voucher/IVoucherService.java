@@ -19,14 +19,9 @@ public interface IVoucherService {
     Voucher addVoucher(VoucherRequest request);
     Voucher updateVoucher(Long id, VoucherRequest request);
     void deleteVoucher(Long id);
-
-    Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId);
-
     List<Voucher> validateVouchers(OrderRequest request);
     VoucherResponse convertToResponse(Voucher voucher);
     Page<VoucherResponse> convertToResponse(Page<Voucher> vouchers);
-
     Page<Voucher> getValidVouchersForOrder(OrderRequest request, Pageable pageable);
-
     void decreaseVoucherQuantity(Long id);
 }

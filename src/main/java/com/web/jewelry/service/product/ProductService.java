@@ -20,8 +20,7 @@ import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +34,7 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
-public class ProductService implements IProductService {
+public class ProductService implements IProductService, IGetProductService {
     private final ProductRepository productRepository;
     private final ICategoryService categoryService;
     private final ICollectionService collectionService;
@@ -48,19 +47,14 @@ public class ProductService implements IProductService {
 
     @Override
     public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
-                                                     Long maxPrice, List<String> sizes, String dir, Pageable pageable) {
-        Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, pageable);
+                                                     Long maxPrice, List<String> sizes, int page, int size) {
+        Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, PageRequest.of(page - 1, size));
         return  convertToProductResponses(products);
     }
 
     @Override
-    public Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
-        return convertToProductResponses(productRepository.findAllByCategoryId(categoryId, pageable));
-    }
-
-    @Override
-    public Page<ProductResponse> getAllProducts(Pageable pageable) {
-        return convertToProductResponses(productRepository.findAll(pageable));
+    public Page<ProductResponse> getProductsByCategory(Long categoryId, int page, int size) {
+        return convertToProductResponses(productRepository.findAllByCategoryId(categoryId, PageRequest.of(page - 1, size)));
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.model.Order;
 import com.web.jewelry.model.Voucher;
@@ -14,7 +14,7 @@ public class VoucherValidationHandler extends OrderHandler {
     private final IVoucherService voucherService;
 
     @Override
-    public Order process(OrderContext context) {
+    public Order process(OrderHandlerContext context) {
         List<Voucher> vouchers = voucherService.validateVouchers(context.getOrderRequest());
         context.setVouchers(vouchers);
         return processNext(context);

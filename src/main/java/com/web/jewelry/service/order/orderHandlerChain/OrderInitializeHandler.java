@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.dto.request.OrderRequest;
 import com.web.jewelry.enums.EOrderStatus;
@@ -22,7 +22,7 @@ public class OrderInitializeHandler extends OrderHandler {
     private final OrderRepository orderRepository;
 
     @Override
-    public Order process(OrderContext context) {
+    public Order process(OrderHandlerContext context) {
         Cart cart = cartService.getMyCart();
         context.setCart(cart);
         OrderRequest request = context.getOrderRequest();

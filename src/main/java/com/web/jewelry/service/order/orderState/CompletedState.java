@@ -1,4 +1,14 @@
 package com.web.jewelry.service.order.orderState;
 
-public class CompletedState {
+import com.web.jewelry.enums.EOrderStatus;
+
+public class CompletedState extends OrderState{
+    public CompletedState(OrderStateContext context) {
+        super(context);
+    }
+
+    @Override
+    public EOrderStatus getStatus() {
+        return EOrderStatus.COMPLETED;
+    }
 }

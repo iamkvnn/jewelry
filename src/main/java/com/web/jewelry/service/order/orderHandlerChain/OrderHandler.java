@@ -1,4 +1,4 @@
-package com.web.jewelry.service.order;
+package com.web.jewelry.service.order.orderHandlerChain;
 
 import com.web.jewelry.model.Order;
 
@@ -9,9 +9,9 @@ public abstract class OrderHandler {
         this.nextHandler = next;
     }
 
-    public abstract Order process(OrderContext context);
+    public abstract Order process(OrderHandlerContext context);
 
-    protected Order processNext(OrderContext context) {
+    protected Order processNext(OrderHandlerContext context) {
         if (nextHandler != null) {
             return nextHandler.process(context);
         }
