@@ -28,13 +28,13 @@ public class OrderValidationHandler extends OrderHandler {
         vouchers.forEach(voucher -> {
             if (voucher.getType() == EVoucherType.FREESHIP) {
                 Long discount = voucher.getDiscountRate() * orderRequest.getShippingFee() > voucher.getApplyLimit() ?
-                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getShippingFee();
+                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getShippingFee() / 100;
                 if (!discount.equals(orderRequest.getFreeShipDiscount())) {
                     throw new BadRequestException("Free ship discount is not correct");
                 }
             } else if (voucher.getType() == EVoucherType.PROMOTION) {
                 Long discount = voucher.getDiscountRate() * orderRequest.getTotalProductPrice() > voucher.getApplyLimit() ?
-                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getTotalProductPrice();
+                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getTotalProductPrice() / 100;
                 if (!discount.equals(orderRequest.getPromotionDiscount())) {
                     throw new BadRequestException("Promotion discount is not correct");
                 }

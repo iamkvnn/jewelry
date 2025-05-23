@@ -25,7 +25,11 @@ public abstract class PaymentTemplate implements IPaymentStrategyService{
         if (payment == null) {
             return false;
         }
-        Order order = orderRepository.findById(callbackData.get("orderId"))
+        String orderId = callbackData.get("orderId");
+        if (orderId == null) {
+            orderId = callbackData.get("vnp_OrderInfo").substring(20);
+        }
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         updatePayment(payment);
         sendNotification(order);

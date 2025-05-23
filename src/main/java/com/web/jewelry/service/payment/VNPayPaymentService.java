@@ -122,8 +122,7 @@ public class VNPayPaymentService extends PaymentTemplate {
             String signValue = vnPayConfig.hashAllFields(callbackData);
             if (signValue.equals(vnp_SecureHash) && callbackData.get("vnp_ResponseCode").equals("00")) {
                 String orderId = callbackData.get("vnp_OrderInfo").substring(20);
-                Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-                VNPayPayment payment = vnPayPaymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+                VNPayPayment payment = vnPayPaymentRepository.findByOrderId(orderId).orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
                 payment.setTransactionNumber(callbackData.get("vnp_TransactionNo"));
                 payment.setBank(callbackData.get("vnp_BankCode"));
                 payment.setVnPayResponseCode(callbackData.get("vnp_ResponseCode"));
