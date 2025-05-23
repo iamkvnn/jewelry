@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
-public class ProductService implements IProductService, IGetProductService {
+public class ProductService implements IProductService {
     private final ProductRepository productRepository;
     private final ICategoryService categoryService;
     private final ICollectionService collectionService;
@@ -212,8 +212,7 @@ public class ProductService implements IProductService, IGetProductService {
         return products.map(this::convertToProductResponse);
     }
 
-    @Override
-    public boolean existsByTitle(String title) {
+    private boolean existsByTitle(String title) {
         return productRepository.existsByTitleAndAvailable(title);
     }
 }

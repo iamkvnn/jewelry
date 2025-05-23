@@ -31,8 +31,6 @@ public class MomoPaymentConfig {
         SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         mac.init(secretKeySpec);
         byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-
-        // Chuyển hash sang HEX
         StringBuilder hexString = new StringBuilder();
         for (byte b : hash) {
             hexString.append(String.format("%02x", b));
@@ -62,11 +60,8 @@ public class MomoPaymentConfig {
 
         try (Response response = client.newCall(momoRequest).execute()) {
             assert response.body() != null;
-            // Đọc body một lần
-
-            return response.body().string(); // Trả về nội dung
+            return response.body().string();
         } catch (IOException e) {
-            e.printStackTrace();
             return null;
         }
     }
@@ -88,11 +83,11 @@ public class MomoPaymentConfig {
         return new MomoPaymentRequest(partnerCode, accessKey, requestId, amount, orderId, orderInfo, returnUrl,
                 notifyUrl, extraData, requestType, signature);
     }
-    public boolean isValidSignature(Map<String, Object> response) {
-        try {
-            String signatureFromMoMo = response.get("signature").toString();
-            response.remove("signature");
 
+    public boolean isValidSignature(Map<String, String> response) {
+        try {
+            String signatureFromMoMo = response.get("signature");
+            response.remove("signature");
             // Sắp xếp key theo thứ tự alphabet
             StringBuilder rawData = new StringBuilder();
             rawData.append("accessKey").append("=")
@@ -102,7 +97,7 @@ public class MomoPaymentConfig {
                     .sorted(Map.Entry.comparingByKey()) // Sắp xếp key theo thứ tự alphabet
                     .forEach(entry -> {
                         String key = entry.getKey();
-                        String value = entry.getValue() != null ? entry.getValue().toString().trim() : "";
+                        String value = entry.getValue() != null ? entry.getValue().trim() : "";
                         rawData.append(key).append("=")
                                 .append(value)
                                 .append("&");
@@ -111,22 +106,18 @@ public class MomoPaymentConfig {
             if (!rawData.isEmpty()) {
                 rawData.setLength(rawData.length() - 1);
             }
-
             // Tạo signature mới
             String generatedSignature = generateSignature(rawData.toString(), secretKey);
             return generatedSignature.equals(signatureFromMoMo);
         } catch (Exception e) {
-            e.printStackTrace();
             return false;
         }
     }
 
     @Getter
     public enum ERequestType {
-        //CAPTURE_WALLET("captureWallet");
         PAY_WITH_ATM("payWithATM");
         private final String value;
-
         ERequestType(String value) {
             this.value = value;
         }

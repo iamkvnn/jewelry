@@ -1,16 +1,14 @@
 package com.web.jewelry.service.payment;
 
 import com.web.jewelry.config.VNPayPaymentConfig;
-import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.enums.EPaymentStatus;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.Order;
+import com.web.jewelry.model.Payment;
 import com.web.jewelry.model.VNPayPayment;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.VNPayPaymentRepository;
 import com.web.jewelry.service.notification.INotificationService;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,19 +16,14 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@RequiredArgsConstructor
 @Service
-public class VNPayPaymentService{
-    private final OrderRepository orderRepository;
+public class VNPayPaymentService extends PaymentTemplate {
     private final VNPayPaymentRepository vnPayPaymentRepository;
     private final VNPayPaymentConfig vnPayConfig;
-    private final INotificationService notificationService;
-    //private final ModelMapper modelMapper;
 
     @Value("${VNPay.vnp_Version}")
     private String vnp_Version;
@@ -43,18 +36,25 @@ public class VNPayPaymentService{
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
+    public VNPayPaymentService(INotificationService notificationService, OrderRepository orderRepository,
+                               VNPayPaymentRepository vnPayPaymentRepository, VNPayPaymentConfig vnPayConfig) {
+        super(notificationService, orderRepository);
+        this.vnPayPaymentRepository = vnPayPaymentRepository;
+        this.vnPayConfig = vnPayConfig;
+    }
+
+    @Override
     public VNPayPayment createPayment(Order order) {
         VNPayPayment payment = VNPayPayment.builder()
                 .order(order)
                 .amount(order.getTotalPrice())
                 .paymentMessage("Thanh toán đơn hàng " + order.getId())
-                .paymentInfo("Thanh toán khi nhận hàng")
                 .status(EPaymentStatus.PROCESSING)
                 .build();
         return vnPayPaymentRepository.save(payment);
     }
 
-    public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
+    public String getPaymentUrl(String orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         String vnp_TxnRef = vnPayConfig.getRandomNumber(8);
         long vnp_Amount = order.getTotalPrice() * 100;
@@ -103,58 +103,43 @@ public class VNPayPaymentService{
             }
         }
         String queryUrl = query.toString();
-        String vnp_SecureHash = vnPayConfig.hmacSHA512(hashData.toString());
+        String vnp_SecureHash;
+        try {
+            vnp_SecureHash = vnPayConfig.hmacSHA512(hashData.toString());
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
         return vnp_Url + "?" + queryUrl;
     }
 
-    public boolean checkPayment(HttpServletRequest request) throws NoSuchAlgorithmException, InvalidKeyException {
-        Locale localeVN = Locale.forLanguageTag("vi-VN");
-        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
-        currencyFormatter.setCurrency(Currency.getInstance("VND"));
-        Map<String, String> fields = new HashMap<>();
-        for (Enumeration<String> params = request.getParameterNames(); params.hasMoreElements();) {
-            String fieldName;
-            String fieldValue;
-            fieldName = URLEncoder.encode(params.nextElement(), StandardCharsets.US_ASCII);
-            fieldValue = URLEncoder.encode(request.getParameter(fieldName), StandardCharsets.US_ASCII);
-            if ((fieldValue != null) && (!fieldValue.isEmpty())) {
-                fields.put(fieldName, fieldValue);
+    @Override
+    public Payment validateCallback(Map<String, String> callbackData) {
+        String vnp_SecureHash = callbackData.get("vnp_SecureHash");
+        callbackData.remove("vnp_SecureHashType");
+        callbackData.remove("vnp_SecureHash");
+        try {
+            String signValue = vnPayConfig.hashAllFields(callbackData);
+            if (signValue.equals(vnp_SecureHash) && callbackData.get("vnp_ResponseCode").equals("00")) {
+                String orderId = callbackData.get("vnp_OrderInfo").substring(20);
+                Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+                VNPayPayment payment = vnPayPaymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+                payment.setTransactionNumber(callbackData.get("vnp_TransactionNo"));
+                payment.setBank(callbackData.get("vnp_BankCode"));
+                payment.setVnPayResponseCode(callbackData.get("vnp_ResponseCode"));
+                payment.setPaymentInfo("Thanh toán thành công");
+                payment.setPaymentDate(LocalDateTime.now());
+                payment.setStatus(EPaymentStatus.PAID);
+                return payment;
             }
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new RuntimeException(e);
         }
+        return null;
+    }
 
-        String vnp_SecureHash = request.getParameter("vnp_SecureHash");
-        fields.remove("vnp_SecureHashType");
-        fields.remove("vnp_SecureHash");
-        String signValue = vnPayConfig.hashAllFields(fields);
-        if (signValue.equals(vnp_SecureHash) && request.getParameter("vnp_ResponseCode").equals("00")) {
-            String orderId = request.getParameter("vnp_OrderInfo").substring(20);
-            Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-            VNPayPayment payment = vnPayPaymentRepository.findByOrderId(order.getId()).orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-            payment.setTransactionNumber(request.getParameter("vnp_TransactionNo"));
-            payment.setBank(request.getParameter("vnp_BankCode"));
-            payment.setVnPayResponseCode(request.getParameter("vnp_ResponseCode"));
-            payment.setPaymentDate(LocalDateTime.now());
-            payment.setStatus(EPaymentStatus.PAID);
-            vnPayPaymentRepository.save(payment);
-            notificationService.sendNotificationToSpecificCustomer(
-                    NotificationRequest.builder()
-                            .title("Thông báo đơn hàng")
-                            .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua VNPay.")
-                            .customerIds(Set.of(order.getCustomer().getId()))
-                            .isEmail(true)
-                            .build());
-            notificationService.sendNotificationToAllStaff(
-                    NotificationRequest.builder()
-                            .title("Thông báo có đơn hàng mới")
-                            .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua VNPay.\n Vui lòng kiểm tra.")
-                            .build());
-            notificationService.sendNotificationToAllManager(
-                    NotificationRequest.builder()
-                            .title("Vừa có đơn hàng mới được tạo")
-                            .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua VNPay.")
-                            .build());
-        }
-        return false;
+    @Override
+    protected void updatePayment(Payment payment) {
+        vnPayPaymentRepository.save((VNPayPayment) payment);
     }
 }

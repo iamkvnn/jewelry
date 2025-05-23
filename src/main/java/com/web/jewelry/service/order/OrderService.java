@@ -17,9 +17,7 @@ import com.web.jewelry.repository.ReturnItemRepository;
 import com.web.jewelry.service.notification.INotificationService;
 import com.web.jewelry.service.order.orderHandlerChain.*;
 import com.web.jewelry.service.order.orderState.*;
-import com.web.jewelry.service.payment.CODPaymentService;
-import com.web.jewelry.service.payment.MomoPaymentService;
-import com.web.jewelry.service.payment.VNPayPaymentService;
+import com.web.jewelry.service.payment.PaymentServiceFactory;
 import com.web.jewelry.service.user.IUserService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -49,9 +47,7 @@ public class OrderService implements IOrderService {
     private final ReturnItemRepository returnItemRepository;
     private final IUserService userService;
     private final INotificationService notificationService;
-    private final CODPaymentService codPaymentService;
-    private final MomoPaymentService momoPaymentService;
-    private final VNPayPaymentService vnPayPaymentService;
+    private final PaymentServiceFactory paymentServiceFactory;
     private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
@@ -78,12 +74,12 @@ public class OrderService implements IOrderService {
         context.setOrderRequest(orderRequest);
         Order order = orderInitializeHandler.process(context);
         if (order.getPaymentMethod() == EPaymentMethod.COD) {
-            order.setCodPayment(codPaymentService.createPayment(order));
+            order.setCodPayment((CODPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.COD).createPayment(order));
         }
         else if (order.getPaymentMethod() == EPaymentMethod.MOMO) {
-            order.setMomoPayment(momoPaymentService.createPayment(order));
+            order.setMomoPayment((MomoPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.MOMO).createPayment(order));
         } else if (order.getPaymentMethod() == EPaymentMethod.VN_PAY) {
-            order.setVnPayPayment(vnPayPaymentService.createPayment(order));
+            order.setVnPayPayment((VNPayPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.VN_PAY).createPayment(order));
         }
         return order;
     }

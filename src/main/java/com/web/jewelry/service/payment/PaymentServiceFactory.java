@@ -1,7 +1,6 @@
 package com.web.jewelry.service.payment;
 
 import com.web.jewelry.enums.EPaymentMethod;
-import com.web.jewelry.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +16,6 @@ public class PaymentServiceFactory {
             case VN_PAY -> vnPayPaymentService;
             case MOMO -> momoPaymentService;
             case COD -> codPaymentService;
-            default -> throw new BadRequestException("Invalid payment method: " + paymentMethod);
         };
     }
 }
