@@ -167,7 +167,7 @@ public class CartService implements ICartService, ProductSizeListener {
     }
 
     @Override
-    public void onProductSizeChange(Long productSizeId) {
+    public void onProductSizeDeleted(Long productSizeId) {
         cartItemRepository.deleteAllByByProductSizeId(productSizeId);
     }
 }

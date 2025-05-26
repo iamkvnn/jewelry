@@ -20,8 +20,7 @@ import com.web.jewelry.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,33 +47,14 @@ public class ProductService implements IProductService {
 
     @Override
     public Page<ProductResponse> getSearchAndFilterProducts(String title, List<Long> categories, String material, Long minPrice,
-                                                     Long maxPrice, List<String> sizes, String dir, Pageable pageable) {
-        Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, pageable);
-        if( dir != null && (dir.equals("asc") || dir.equals("desc"))) {
-            Comparator<Product> comparator = Comparator.comparing(
-                    p -> p.getProductSizes().stream()
-                            .map(ProductSize::getDiscountPrice)
-                            .min(Long::compareTo)
-                            .orElse(Long.MAX_VALUE)
-            );
-            if (dir.equals("desc")) {
-               comparator = comparator.reversed();
-            }
-            List<Product> sortedProducts = products.stream().sorted(comparator).collect(Collectors.toList());
-            Page<Product> response = new PageImpl<>(sortedProducts, pageable, products.getTotalElements());
-            return  convertToProductResponses(response);
-        }
+                                                     Long maxPrice, List<String> sizes, int page, int size) {
+        Page<Product> products = productRepository.findByFilters(title, categories, material, minPrice, maxPrice, sizes, PageRequest.of(page - 1, size));
         return  convertToProductResponses(products);
     }
 
     @Override
-    public Page<ProductResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
-        return convertToProductResponses(productRepository.findAllByCategoryId(categoryId, pageable));
-    }
-
-    @Override
-    public Page<ProductResponse> getAllProducts(Pageable pageable) {
-        return convertToProductResponses(productRepository.findAll(pageable));
+    public Page<ProductResponse> getProductsByCategory(Long categoryId, int page, int size) {
+        return convertToProductResponses(productRepository.findAllByCategoryId(categoryId, PageRequest.of(page - 1, size)));
     }
 
     @Override
@@ -208,6 +188,7 @@ public class ProductService implements IProductService {
         }
     }
 
+    @Transactional
     @Override
     public void deleteProduct(Long productId) {
         Product product = getProductById(productId);
@@ -231,8 +212,7 @@ public class ProductService implements IProductService {
         return products.map(this::convertToProductResponse);
     }
 
-    @Override
-    public boolean existsByTitle(String title) {
+    private boolean existsByTitle(String title) {
         return productRepository.existsByTitleAndAvailable(title);
     }
 }

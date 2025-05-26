@@ -14,16 +14,12 @@ import com.web.jewelry.model.*;
 import com.web.jewelry.repository.CustomerRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.repository.ReturnItemRepository;
-import com.web.jewelry.service.address.IAddressService;
-import com.web.jewelry.service.cart.ICartService;
 import com.web.jewelry.service.notification.INotificationService;
-import com.web.jewelry.service.payment.CODPaymentService;
-import com.web.jewelry.service.payment.MomoPaymentService;
-import com.web.jewelry.service.payment.VNPayPaymentService;
-import com.web.jewelry.service.productSize.IProductSizeService;
+import com.web.jewelry.service.order.orderHandlerChain.*;
+import com.web.jewelry.service.order.orderState.*;
+import com.web.jewelry.service.payment.PaymentServiceFactory;
 import com.web.jewelry.service.user.IUserService;
-import com.web.jewelry.service.voucher.IVoucherService;
-import com.web.jewelry.utils.OrderIdGenerator;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -35,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,19 +39,26 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
+    private final OrderInitializeHandler orderInitializeHandler;
+    private final OrderItemCreationHandler orderItemCreationHandler;
+    private final VoucherValidationHandler voucherValidationHandler;
+    private final OrderValidationHandler orderValidationHandler;
+    private final OrderCompletionHandler orderCompletionHandler;
     private final ReturnItemRepository returnItemRepository;
-    private final IVoucherService voucherService;
-    private final IProductSizeService productSizeService;
-    private final IAddressService addressService;
-    private final ICartService cartService;
     private final IUserService userService;
     private final INotificationService notificationService;
-    private final CODPaymentService codPaymentService;
-    private final MomoPaymentService momoPaymentService;
-    private final VNPayPaymentService vnPayPaymentService;
+    private final PaymentServiceFactory paymentServiceFactory;
     private final CustomerRepository customerRepository;
     private final ModelMapper modelMapper;
     private final RestTemplate restTemplate;
+
+    @PostConstruct
+    public void init() {
+        orderInitializeHandler.setNext(orderItemCreationHandler);
+        orderItemCreationHandler.setNext(voucherValidationHandler);
+        voucherValidationHandler.setNext(orderValidationHandler);
+        orderValidationHandler.setNext(orderCompletionHandler);
+    }
 
     @Value("${ghtk.url.fee}")
     private String url;
@@ -68,136 +70,18 @@ public class OrderService implements IOrderService {
     @Transactional
     @Override
     public Order placeOrder(OrderRequest orderRequest) {
-        Cart cart = cartService.getMyCart();
-        Address address = addressService.getAddressById(orderRequest.getShippingAddress().getId());
-        Order order = initializeOrder(orderRequest, cart, address);
-        List<OrderItem> orderItems = createOrderItems(order, cart, orderRequest);
-        List<Voucher> vouchers = validateVouchers(order.getCustomer().getId(), orderRequest);
-        validateOrder(orderRequest, orderItems, vouchers);
-        order.setOrderItems(orderItems);
-        order.setVouchers(vouchers.stream()
-                .map(voucher -> OrderVoucher.builder()
-                        .order(order)
-                        .voucher(voucher)
-                        .customerId(order.getCustomer().getId())
-                        .build())
-                .toList());
-        Order newOrder = orderRepository.save(order);
-        if (newOrder.getPaymentMethod() == EPaymentMethod.COD) {
-            newOrder.setCodPayment(codPaymentService.createPayment(order));
+        OrderHandlerContext context = new OrderHandlerContext();
+        context.setOrderRequest(orderRequest);
+        Order order = orderInitializeHandler.process(context);
+        if (order.getPaymentMethod() == EPaymentMethod.COD) {
+            order.setCodPayment((CODPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.COD).createPayment(order));
         }
-        else if (newOrder.getPaymentMethod() == EPaymentMethod.MOMO) {
-            newOrder.setMomoPayment(momoPaymentService.createPayment(order));
-        } else if (newOrder.getPaymentMethod() == EPaymentMethod.VN_PAY) {
-            newOrder.setVnPayPayment(vnPayPaymentService.createPayment(order));
+        else if (order.getPaymentMethod() == EPaymentMethod.MOMO) {
+            order.setMomoPayment((MomoPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.MOMO).createPayment(order));
+        } else if (order.getPaymentMethod() == EPaymentMethod.VN_PAY) {
+            order.setVnPayPayment((VNPayPayment) paymentServiceFactory.getPaymentService(EPaymentMethod.VN_PAY).createPayment(order));
         }
-        return newOrder;
-    }
-
-    private List<Voucher> validateVouchers(Long customerId, OrderRequest orderRequest) {
-        List<Voucher> vouchers = voucherService.validateVouchers(orderRequest);
-        vouchers.forEach(voucher -> {
-                        Long used = voucherService.countUsedByVoucherCodeAndCustomerId(voucher.getCode(), customerId);
-                        if (used >= voucher.getLimitUsePerCustomer()) {
-                            throw new BadRequestException("Voucher " + voucher.getCode() + " has been used up");
-                        }
-                        voucherService.decreaseVoucherQuantity(voucher.getId());
-                });
-        return vouchers;
-    }
-
-    private void validateOrder(OrderRequest orderRequest, List<OrderItem> orderItems, List<Voucher> vouchers) {
-        Long total = orderItems.stream()
-                .map(OrderItem::getTotalPrice)
-                .reduce(0L, Long::sum);
-        if (!total.equals(orderRequest.getTotalProductPrice())) {
-            throw new BadRequestException("Total product price is not correct");
-        }
-        vouchers.forEach(voucher -> {
-            if (voucher.getType() == EVoucherType.FREESHIP) {
-                Long discount = voucher.getDiscountRate() * orderRequest.getShippingFee() > voucher.getApplyLimit() ?
-                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getShippingFee();
-                if (!discount.equals(orderRequest.getFreeShipDiscount())) {
-                    throw new BadRequestException("Free ship discount is not correct");
-                }
-            } else if (voucher.getType() == EVoucherType.PROMOTION) {
-                Long discount = voucher.getDiscountRate() * orderRequest.getTotalProductPrice() > voucher.getApplyLimit() ?
-                        voucher.getApplyLimit() : voucher.getDiscountRate() * orderRequest.getTotalProductPrice();
-                if (!discount.equals(orderRequest.getPromotionDiscount())) {
-                    throw new BadRequestException("Promotion discount is not correct");
-                }
-            }
-        });
-        if (!orderRequest.getTotalPrice().equals(total + orderRequest.getShippingFee() - orderRequest.getFreeShipDiscount() - orderRequest.getPromotionDiscount())) {
-            throw new BadRequestException("Total price is not correct");
-        }
-    }
-
-    private Order initializeOrder(OrderRequest orderRequest, Cart cart, Address address) {
-        LocalDateTime orderDate = LocalDateTime.now();
-        String orderCode = OrderIdGenerator.getInstance().generateCode(orderDate);
-        while (orderRepository.existsById(orderCode)) {
-            orderCode = OrderIdGenerator.getInstance().generateCode(orderDate);
-        }
-        return Order.builder()
-                .id(orderCode)
-                .shippingAddress(address)
-                .shippingMethod(orderRequest.getShippingMethod())
-                .paymentMethod(orderRequest.getPaymentMethod())
-                .status(EOrderStatus.PENDING)
-                .note(orderRequest.getNote())
-                .orderDate(orderDate)
-                .customer(cart.getCustomer())
-                .isReviewed(false)
-                .totalProductPrice(orderRequest.getTotalProductPrice())
-                .shippingFee(orderRequest.getShippingFee())
-                .freeShipDiscount(orderRequest.getFreeShipDiscount())
-                .promotionDiscount(orderRequest.getPromotionDiscount())
-                .totalPrice(orderRequest.getTotalPrice())
-                .build();
-    }
-
-    private List<OrderItem> createOrderItems(Order order, Cart cart, OrderRequest request) {
-        List<Long> productSizeIds = request.getCartItems().stream()
-                .map(cartItem -> cartItem.getProductSize().getId())
-                .toList();
-        Map<Long, CartItem> cartItemMap = cart.getCartItems().stream()
-                .collect(Collectors.toMap(
-                        item -> item.getProductSize().getId(),
-                        item -> item
-                ));
-        if (!cartItemMap.keySet().containsAll(productSizeIds)) {
-            throw new ResourceNotFoundException("Product not found in your cart");
-        }
-        List<ProductSize> productSizes = productSizeService.getProductSizesByIds(productSizeIds);
-        Map<Long, ProductSize> productSizeMap = productSizes.stream()
-                .collect(Collectors.toMap(ProductSize::getId, size -> size));
-
-        List<OrderItem> items = request.getCartItems().stream()
-                .map(item -> {
-                    Long sizeId = item.getProductSize().getId();
-                    CartItem cartItem = cartItemMap.get(sizeId);
-                    ProductSize size = productSizeMap.get(sizeId);
-                    if (size.getStock() < cartItem.getQuantity()) {
-                        throw new ResourceNotFoundException("Not enough stock for product: " + size.getProduct().getTitle() + " - Size: " + size.getSize());
-                    }
-                    size.setStock(size.getStock() - cartItem.getQuantity());
-                    size.setSold(size.getSold() + cartItem.getQuantity());
-                    productSizeMap.put(sizeId, size);
-                    return OrderItem.builder()
-                            .order(order)
-                            .productSize(size)
-                            .product(size.getProduct())
-                            .price(size.getPrice())
-                            .discountPrice(size.getDiscountPrice())
-                            .totalPrice(size.getDiscountPrice() * cartItem.getQuantity())
-                            .quantity(cartItem.getQuantity())
-                            .build();
-                })
-                .toList();
-        productSizeService.updateStockAndSold(productSizeMap.values().stream().toList());
-        cartService.removeItemsFromCart(productSizeIds);
-        return items;
+        return order;
     }
 
     @Override
@@ -225,15 +109,42 @@ public class OrderService implements IOrderService {
         }
     }
 
+    @Transactional
     @Override
     public Order updateOrderStatus(String orderId, EOrderStatus status) {
         Order order = getOrder(orderId);
-        order.setStatus(status);
-        if (status.equals(EOrderStatus.COMPLETED)){
-            Customer customer = order.getCustomer();
-            customer.setTotalSpent(customer.getTotalSpent() + order.getTotalPrice());
-            customer.setMembershipRank(calcRank(customer.getTotalSpent()));
-            customerRepository.save(customer);
+        OrderStateContext context = new OrderStateContext(order);
+        switch (status) {
+            case CONFIRMED:
+                context.confirmOrder();
+                break;
+            case SHIPPING:
+                context.shipOrder();
+                break;
+            case DELIVERED:
+                context.deliverOrder();
+                break;
+            case COMPLETED:
+                context.completeOrder();
+                Customer customer = order.getCustomer();
+                customer.setTotalSpent(customer.getTotalSpent() + order.getTotalPrice());
+                customer.setMembershipRank(calcRank(customer.getTotalSpent()));
+                customerRepository.save(customer);
+                break;
+            case CANCELLED:
+                context.cancelOrder();
+                break;
+            case RETURN_REQUESTED:
+                context.returnOrder();
+                break;
+            case RETURNED:
+                context.acceptReturn();
+                break;
+            case RETURN_REJECTED:
+                context.rejectReturn();
+                break;
+            default:
+                throw new BadRequestException("Unknown order status: " + status);
         }
         return orderRepository.save(order);
     }

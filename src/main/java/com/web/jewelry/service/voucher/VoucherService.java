@@ -34,6 +34,7 @@ import java.util.Set;
 public class VoucherService implements IVoucherService {
     private final VoucherRepository voucherRepository;
     private final VoucherApplicabilityRepository voucherApplicabilityRepository;
+    private final CompositeVoucherValidator compositeVoucherValidator;
     private final INotificationService notificationService;
     private final IUserService userService;
     private final ModelMapper modelMapper;
@@ -126,7 +127,7 @@ public class VoucherService implements IVoucherService {
         Voucher oldVoucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
         Voucher existingVoucher = voucherRepository.findByCode(request.getCode()).orElse(null);
-        if (existingVoucher != null && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
+        if (existingVoucher != null && !oldVoucher.getCode().equals(existingVoucher.getCode()) && existingVoucher.getValidTo().isAfter(LocalDateTime.now())) {
             throw new AlreadyExistException("A valid voucher code already exists");
         }
         updateVoucherDetails(oldVoucher, request);
@@ -179,67 +180,15 @@ public class VoucherService implements IVoucherService {
     }
 
     @Override
-    public Long countUsedByVoucherCodeAndCustomerId(String code, Long customerId) {
-        return voucherRepository.countUsedByVoucherCodeAndCustomerId(code, customerId);
-    }
-
-    @Override
     public List<Voucher> validateVouchers(OrderRequest request) {
         List<Voucher> vouchers = request.getVoucherCodes().stream()
                 .map(this::getVoucherByCode)
                 .toList();
-        if (vouchers.size() > 2) {
-            throw new BadRequestException("An order can have only two vouchers.");
-        }
-        int freeShipCount = 0;
-        int promotionCount = 0;
-        for (Voucher voucher : vouchers) {
-            if (voucher.getType() == EVoucherType.FREESHIP) {
-                freeShipCount++;
-            } else if (voucher.getType() == EVoucherType.PROMOTION) {
-                promotionCount++;
-            }
-        }
-
-        if (freeShipCount > 1) {
-            throw new BadRequestException("An order can have only one 'FREESHIP' voucher.");
-        }
-        if (promotionCount > 1) {
-            throw new BadRequestException("An order can have only one 'PROMOTION' voucher.");
-        }
-        vouchers.forEach(voucher -> {
-            checkValidDate(voucher);
-            if (voucher.getMinimumToApply() != null && request.getTotalProductPrice() < voucher.getMinimumToApply()) {
-                throw new BadRequestException("Minimum order value is not met");
-            }
-            voucher.getVoucherApplicabilities().stream().filter(voucherApplicability -> switch (voucherApplicability.getType()) {
-                case ALL -> true;
-                case PRODUCT -> request.getCartItems().stream().map(
-                        cartItem -> cartItem.getProduct().getId()
-                ).toList().contains(voucherApplicability.getApplicableObjectId());
-                case CATEGORY -> request.getCartItems().stream().map(
-                        cartItem -> cartItem.getProduct().getCategory() != null ? cartItem.getProduct().getCategory().getId() : Long.valueOf(-1)
-                ).toList().contains(voucherApplicability.getApplicableObjectId());
-                case COLLECTION -> request.getCartItems().stream().map(
-                        cartItem -> cartItem.getProduct().getCollection() != null ? cartItem.getProduct().getCollection().getId() : Long.valueOf(-1)
-                ).toList().contains(voucherApplicability.getApplicableObjectId());
-                case CUSTOMER -> userService.getCurrentUser().getId().equals(voucherApplicability.getApplicableObjectId());
-            }).findFirst().orElseThrow(() -> new BadRequestException("Invalid voucher applicability"));
-        });
+        compositeVoucherValidator.isValid(vouchers, request);
         return vouchers;
     }
 
-    private void checkValidDate(Voucher voucher) {
-        if (voucher.getValidFrom().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot use this voucher now");
-        }
-        if (voucher.getValidTo().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Voucher is expired");
-        }
-        if (voucher.getQuantity() <= 0) {
-            throw new BadRequestException("Voucher is out of stock");
-        }
-    }
+
 
     @Override
     public VoucherResponse convertToResponse(Voucher voucher) {

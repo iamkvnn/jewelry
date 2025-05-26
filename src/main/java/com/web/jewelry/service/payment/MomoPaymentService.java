@@ -4,98 +4,98 @@ import com.nimbusds.jose.shaded.gson.JsonObject;
 import com.nimbusds.jose.shaded.gson.JsonParser;
 import com.web.jewelry.config.MomoPaymentConfig;
 import com.web.jewelry.dto.request.MomoPaymentRequest;
-import com.web.jewelry.dto.request.NotificationRequest;
 import com.web.jewelry.enums.EPaymentMethod;
 import com.web.jewelry.enums.EPaymentStatus;
+import com.web.jewelry.exception.BadRequestException;
 import com.web.jewelry.exception.ResourceNotFoundException;
 import com.web.jewelry.model.MomoPayment;
 import com.web.jewelry.model.Order;
+import com.web.jewelry.model.Payment;
 import com.web.jewelry.repository.MomoPaymentRepository;
 import com.web.jewelry.repository.OrderRepository;
 import com.web.jewelry.service.notification.INotificationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
-public class MomoPaymentService {
-    private final OrderRepository orderRepository;
+public class MomoPaymentService extends PaymentTemplate {
     private final MomoPaymentRepository momoPaymentRepository;
     private final MomoPaymentConfig momoConfig;
-    private final INotificationService notificationService;
-    //private final ModelMapper modelMapper;
 
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
+    public MomoPaymentService(INotificationService notificationService, OrderRepository orderRepository,
+                              MomoPaymentRepository momoPaymentRepository, MomoPaymentConfig momoConfig) {
+        super(notificationService, orderRepository);
+        this.momoPaymentRepository = momoPaymentRepository;
+        this.momoConfig = momoConfig;
+    }
+
+    @Override
     public MomoPayment createPayment(Order order) {
         MomoPayment payment = MomoPayment.builder()
                 .order(order)
                 .amount(order.getTotalPrice())
                 .paymentMessage("Thanh toán đơn hàng " + order.getId())
-                .paymentInfo("Thanh toán khi nhận hàng")
                 .status(EPaymentStatus.PROCESSING)
                 .build();
         return momoPaymentRepository.save(payment);
     }
 
-    public String getPaymentUrl(String orderId) throws NoSuchAlgorithmException, InvalidKeyException {
+    @Override
+    public String getPaymentUrl(String orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)){
-            String returnUrl = feBaseUrl + "/checkouts/thank-you/" + orderId;
-            String notifyUrl = "https://api.shinyjewelry.shop/api/v1/payments/momo-callback";
-            MomoPaymentRequest request = momoConfig.createPaymentRequest(orderId, order.getTotalPrice().toString(),
-                    "Thanh toán đơn hàng " + orderId, returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM);
-
-            String response = momoConfig.sendToMomo(request);
-            if(response != null){
-                JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
-                return jsonResponse.get("payUrl").getAsString();
-            }
+        if (order.getPaymentMethod() != EPaymentMethod.MOMO) {
+            throw new BadRequestException("Invalid payment method");
         }
-        return null;
+        if (order.getMomoPayment().getStatus() != EPaymentStatus.PROCESSING) {
+            throw new BadRequestException("Order has already been paid or cancelled");
+        }
+        String returnUrl = feBaseUrl + "/checkouts/thank-you/" + orderId;
+        String notifyUrl = "https://api.shinyjewelry.shop/api/v1/payments/momo-callback";
+        MomoPaymentRequest request;
+        try {
+            request = momoConfig.createPaymentRequest(orderId, order.getTotalPrice().toString(),
+                        "Thanh toán đơn hàng " + orderId, returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
+        String response = momoConfig.sendToMomo(request);
+        if (response == null) {
+            throw new RuntimeException("Failed to get payment URL");
+        }
+        JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
+        return jsonResponse.get("payUrl").getAsString();
     }
 
-    public void checkPayment(Map<String, Object> response){
-        Locale localeVN = Locale.forLanguageTag("vi-VN");
-        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
-        currencyFormatter.setCurrency(Currency.getInstance("VND"));
-        if(Objects.equals(response.get("resultCode"), 0) && momoConfig.isValidSignature(response)){
-            String orderId = response.get("orderId").toString();
+    @Override
+    protected void updatePayment(Payment payment) {
+        momoPaymentRepository.save((MomoPayment) payment);
+    }
+
+    @Override
+    public Payment validateCallback(Map<String, String> callbackData) {
+        if(Objects.equals(callbackData.get("resultCode"), "0") && momoConfig.isValidSignature(callbackData)){
+            String orderId = callbackData.get("orderId");
             Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-            if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO)  && response.get("amount") != null
-                    && (order.getTotalPrice() <= Long.parseLong(response.get("amount").toString()))){
+            if(order != null && order.getPaymentMethod().equals(EPaymentMethod.MOMO) && callbackData.get("amount") != null
+                    && (order.getTotalPrice() <= Long.parseLong(callbackData.get("amount")))){
                 MomoPayment momoPayment = momoPaymentRepository.findByOrderId(orderId).orElseThrow(() -> new ResourceNotFoundException("Momo payment not found"));
                 momoPayment.setStatus(EPaymentStatus.PAID);
                 momoPayment.setPaymentDate(LocalDateTime.now());
-                momoPayment.setRequestId(response.get("requestId").toString());
-                momoPayment.setTransactionId(Long.parseLong(response.get("transId").toString()));
-                momoPayment.setResultCode(Integer.parseInt(response.get("resultCode").toString()));
-                momoPaymentRepository.save(momoPayment);
-                notificationService.sendNotificationToSpecificCustomer(
-                        NotificationRequest.builder()
-                                .title("Thông báo đơn hàng")
-                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.")
-                                .customerIds(Set.of(order.getCustomer().getId()))
-                                .isEmail(true)
-                                .build());
-                notificationService.sendNotificationToAllStaff(
-                        NotificationRequest.builder()
-                                .title("Thông báo có đơn hàng mới")
-                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.\n Vui lòng kiểm tra.")
-                                .build());
-                notificationService.sendNotificationToAllManager(
-                        NotificationRequest.builder()
-                                .title("Vừa có đơn hàng mới được tạo")
-                                .content("Đơn hàng " + orderId + " đã được đặt và thanh toán thành công số tiền " + currencyFormatter.format(order.getTotalPrice()) + " qua Momo EWallet.")
-                                .build());
+                momoPayment.setRequestId(callbackData.get("requestId"));
+                momoPayment.setTransactionId(Long.parseLong(callbackData.get("transId")));
+                momoPayment.setResultCode(Integer.parseInt(callbackData.get("resultCode")));
+                momoPayment.setPaymentInfo("Thanh toán thành công");
+                return momoPayment;
             }
         }
+        return null;
     }
 }
